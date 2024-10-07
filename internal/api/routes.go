@@ -32,8 +32,11 @@ func SetupRoutes(
 	userService := services.NewUserService(userRepo, userPointService)
 	userHandler := handlers.NewUserHandler(userService, jwtService)
 
-	slackService := services.NewSlackService(config.SlackConfig, slackClient)
+	slackService := services.NewSlackService(&config.SlackConfig, slackClient)
 	slackHandler := handlers.NewSlackHandler(slackService)
+
+	aiChatbotService := services.NewAIChatbotService(config.AzureOpenAI, slackService)
+	aiChatbotHandler := handlers.NewAIChatbotHandler(aiChatbotService)
 
 	userGroup := routes.Group("users")
 	{
@@ -53,9 +56,14 @@ func SetupRoutes(
 		adminRoutes.GET("", userHandler.ListUsers)
 	}
 
+	//TODO: remove after testing AI Chatbot, Slack done
 	slackRoutes := routes.Group("/slack")
 	{
-		// slackRoutes.POST("/events-endpoint", slackHandler.SendMessage)
 		slackRoutes.POST("/send-message", slackHandler.SendMessage)
+	}
+
+	aiAssistantRoutes := routes.Group("/ai-assistant")
+	{
+		aiAssistantRoutes.POST("/add-message", aiChatbotHandler.AddMessage)
 	}
 }

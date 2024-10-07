@@ -27,7 +27,7 @@ func (h *SlackHandler) SendMessage(ctx *gin.Context) {
 		return
 	}
 
-	err := h.slackService.SendMessage(ctx, input.Message)
+	err := h.slackService.SendMessage(ctx, input.ChannelID, input.Message)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return

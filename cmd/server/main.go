@@ -14,6 +14,7 @@ import (
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/api"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/config"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/database"
+	"github.com/sotatek-dev/hyper-automation-chatbot/internal/services"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/slack_handlers"
 	"github.com/sotatek-dev/hyper-automation-chatbot/pkg/logger"
 	"gorm.io/gorm"
@@ -60,7 +61,9 @@ func runGinServer(
 		slack.OptionAppLevelToken(cfg.SlackConfig.Token),
 	)
 	api.SetupRoutes(routes, db, cfg, log, slackClient)
-	go socket(slackClient, context.Background(), log)
+	slackService := services.NewSlackService(&cfg.SlackConfig, slackClient)
+	aiChatbotService := services.NewAIChatbotService(cfg.AzureOpenAI, slackService)
+	go socket(slackClient, context.Background(), log, aiChatbotService)
 
 	// Start server
 	address := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
@@ -70,8 +73,8 @@ func runGinServer(
 	}
 }
 
-func socket(client *slack.Client, ctx context.Context, zerolog *zerolog.Logger) {
-	slackHandler := slack_handlers.NewSlackHandler(client)
+func socket(client *slack.Client, ctx context.Context, zerolog *zerolog.Logger, aiChatbotService *services.AIChatbotService) {
+	slackHandler := slack_handlers.NewSlackHandler(client, aiChatbotService)
 	socketClient := socketmode.New(
 		client,
 		socketmode.OptionDebug(true),
