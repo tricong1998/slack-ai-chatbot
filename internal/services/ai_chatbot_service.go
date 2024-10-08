@@ -11,15 +11,19 @@ import (
 
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/config"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/dto"
+	"github.com/sotatek-dev/hyper-automation-chatbot/internal/models"
+	"gorm.io/gorm"
 )
 
 type AIChatbotService struct {
 	azureOpenAIConfig config.AzureOpenAIConfig
 	slackService      *SlackService
+	threadService     *ThreadService
+	messageService    *MessageService
 }
 
-func NewAIChatbotService(azureOpenAIConfig config.AzureOpenAIConfig, slackService *SlackService) *AIChatbotService {
-	return &AIChatbotService{azureOpenAIConfig: azureOpenAIConfig, slackService: slackService}
+func NewAIChatbotService(azureOpenAIConfig config.AzureOpenAIConfig, slackService *SlackService, threadService *ThreadService, messageService *MessageService) *AIChatbotService {
+	return &AIChatbotService{azureOpenAIConfig: azureOpenAIConfig, slackService: slackService, threadService: threadService, messageService: messageService}
 }
 
 func (s *AIChatbotService) CreateThread(ctx context.Context) (string, error) {
@@ -250,11 +254,30 @@ func (s *AIChatbotService) GetFileInformation(ctx context.Context, fileID string
 	return fileRes, nil
 }
 
-func (s *AIChatbotService) AddAndRunMessage(ctx context.Context, channelID *string, message string) (string, error) {
-	threadID, err := s.CreateThread(ctx)
+func (s *AIChatbotService) AddAndRunMessage(ctx context.Context, channelID *string, message string, userID string) (string, error) {
+	thread, err := s.threadService.GetLatestOpenThreadByChannelAndUserID(*channelID, userID)
+	var threadID string
 	if err != nil {
-		return "", err
+		if err != gorm.ErrRecordNotFound {
+			return "", err
+		} else {
+			fmt.Println("create thread")
+			threadID, err = s.CreateThread(ctx)
+			if err != nil {
+				return "", err
+			}
+			fmt.Println("create thread success")
+			s.threadService.CreateThread(&models.Thread{
+				ID:          threadID,
+				ChannelId:   *channelID,
+				SlackUserId: userID,
+			})
+		}
+	} else {
+		fmt.Println("threadID", threadID)
+		threadID = thread.ID
 	}
+
 	fmt.Println("threadID", threadID)
 	messageID, err := s.CreateMessage(ctx, threadID, message)
 	if err != nil {
@@ -268,7 +291,7 @@ func (s *AIChatbotService) AddAndRunMessage(ctx context.Context, channelID *stri
 	fmt.Println("runID", runID)
 	done := make(chan bool)
 	go func() {
-		ticker := time.NewTicker(5 * time.Second)
+		ticker := time.NewTicker(3 * time.Second)
 		defer ticker.Stop()
 
 		timeout := time.After(5 * time.Minute)

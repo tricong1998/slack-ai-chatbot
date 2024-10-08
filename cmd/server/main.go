@@ -14,6 +14,7 @@ import (
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/api"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/config"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/database"
+	"github.com/sotatek-dev/hyper-automation-chatbot/internal/repository"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/services"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/slack_handlers"
 	"github.com/sotatek-dev/hyper-automation-chatbot/pkg/logger"
@@ -62,7 +63,11 @@ func runGinServer(
 	)
 	api.SetupRoutes(routes, db, cfg, log, slackClient)
 	slackService := services.NewSlackService(&cfg.SlackConfig, slackClient)
-	aiChatbotService := services.NewAIChatbotService(cfg.AzureOpenAI, slackService)
+	threadRepo := repository.NewThreadRepository(db)
+	messageRepo := repository.NewMessageRepository(db)
+	threadService := services.NewThreadService(threadRepo)
+	messageService := services.NewMessageService(messageRepo)
+	aiChatbotService := services.NewAIChatbotService(cfg.AzureOpenAI, slackService, threadService, messageService)
 	go socket(slackClient, context.Background(), log, aiChatbotService)
 
 	// Start server
@@ -116,13 +121,13 @@ func socket(client *slack.Client, ctx context.Context, zerolog *zerolog.Logger, 
 						log.Printf("Could not type cast the message to a SlashCommand: %v\n", command)
 						continue
 					}
-					// Dont forget to acknowledge the request
-					socketClient.Ack(*event.Request)
 					// handleSlashCommand will take care of the command
-					err := slackHandler.HandleSlashCommand(command, client)
+					payload, err := slackHandler.HandleSlashCommand(command, client)
 					if err != nil {
 						log.Fatal(err)
 					}
+					// Dont forget to acknowledge the request
+					socketClient.Ack(*event.Request, payload)
 				}
 
 			}

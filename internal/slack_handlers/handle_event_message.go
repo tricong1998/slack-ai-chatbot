@@ -79,6 +79,6 @@ func (s *SlackHandler) handleMessageEvent(event *slackevents.MessageEvent) error
 	// 	return err
 	// }
 	fmt.Println("asdfjaldkfjlkadjsflkds", event.Text)
-	s.aiChatbotService.AddAndRunMessage(context.Background(), &event.Channel, event.Text)
+	s.aiChatbotService.AddAndRunMessage(context.Background(), &event.Channel, event.Text, event.User)
 	return nil
 }

@@ -25,7 +25,11 @@ func (h *AIChatbotHandler) AddMessage(c *gin.Context) {
 		return
 	}
 
-	message, err := h.aiChatbotService.AddAndRunMessage(c.Request.Context(), req.ChannelID, req.Message)
+	message, err := h.aiChatbotService.AddAndRunMessage(c.Request.Context(),
+		req.ChannelID,
+		req.Message,
+		req.UserID,
+	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

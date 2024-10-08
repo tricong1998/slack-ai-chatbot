@@ -35,7 +35,13 @@ func SetupRoutes(
 	slackService := services.NewSlackService(&config.SlackConfig, slackClient)
 	slackHandler := handlers.NewSlackHandler(slackService)
 
-	aiChatbotService := services.NewAIChatbotService(config.AzureOpenAI, slackService)
+	threadRepo := repository.NewThreadRepository(db)
+	threadService := services.NewThreadService(threadRepo)
+
+	messageRepo := repository.NewMessageRepository(db)
+	messageService := services.NewMessageService(messageRepo)
+
+	aiChatbotService := services.NewAIChatbotService(config.AzureOpenAI, slackService, threadService, messageService)
 	aiChatbotHandler := handlers.NewAIChatbotHandler(aiChatbotService)
 
 	userGroup := routes.Group("users")
