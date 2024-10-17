@@ -40,12 +40,17 @@ type AzureOpenAIConfig struct {
 	AssistantId string `mapstructure:"AZURE_OPENAI_ASSISTANT_ID"`
 }
 
+type GoogleConfig struct {
+	Credentials string `mapstructure:"GOOGLE_CREDENTIALS"`
+}
+
 type Config struct {
 	Server      ServerConfig
 	DB          DBConfig
 	Auth        AuthConfig
 	SlackConfig SlackConfig
 	AzureOpenAI AzureOpenAIConfig
+	Google      GoogleConfig
 }
 
 func LoadConfig(path string) (Config, error) {
@@ -65,6 +70,7 @@ func LoadConfig(path string) (Config, error) {
 	var auth AuthConfig
 	var slackConfig SlackConfig
 	var azureOpenAI AzureOpenAIConfig
+	var google GoogleConfig
 	err = viper.Unmarshal(&server)
 	if err != nil {
 		return Config{}, err
@@ -85,6 +91,10 @@ func LoadConfig(path string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	err = viper.Unmarshal(&google)
+	if err != nil {
+		return Config{}, err
+	}
 
 	config := Config{
 		Server:      server,
@@ -92,6 +102,7 @@ func LoadConfig(path string) (Config, error) {
 		Auth:        auth,
 		SlackConfig: slackConfig,
 		AzureOpenAI: azureOpenAI,
+		Google:      google,
 	}
 	return config, nil
 }

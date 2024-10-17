@@ -6,6 +6,7 @@ import (
 	"github.com/slack-go/slack"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/api/handlers"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/config"
+	"github.com/sotatek-dev/hyper-automation-chatbot/internal/google_internal"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/repository"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/services"
 	"github.com/sotatek-dev/hyper-automation-chatbot/pkg/gin/middleware"
@@ -71,5 +72,16 @@ func SetupRoutes(
 	aiAssistantRoutes := routes.Group("/ai-assistant")
 	{
 		aiAssistantRoutes.POST("/add-message", aiChatbotHandler.AddMessage)
+	}
+
+	ggSheetService := google_internal.GetSheetService(&config.Google)
+	driveService := google_internal.GetDriveService(&config.Google)
+	sheetService := services.NewGSheetService(ggSheetService, driveService)
+	sheetHandler := handlers.NewSheetHandler(sheetService)
+	sheetRoutes := routes.Group("/sheets")
+	{
+		sheetRoutes.POST("/candidate-offer", sheetHandler.ReadCandidateOffer)
+		// sheetRoutes.POST("/create-new-sheet", sheetHandler.CreateNewSheet)
+		sheetRoutes.POST("/handle-file-candidate-offer", sheetHandler.HandleFileCandidateOffer)
 	}
 }

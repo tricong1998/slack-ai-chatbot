@@ -14,7 +14,6 @@ import (
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/api"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/config"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/database"
-	"github.com/sotatek-dev/hyper-automation-chatbot/internal/repository"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/services"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/slack_handlers"
 	"github.com/sotatek-dev/hyper-automation-chatbot/pkg/logger"
@@ -62,13 +61,13 @@ func runGinServer(
 		slack.OptionAppLevelToken(cfg.SlackConfig.Token),
 	)
 	api.SetupRoutes(routes, db, cfg, log, slackClient)
-	slackService := services.NewSlackService(&cfg.SlackConfig, slackClient)
-	threadRepo := repository.NewThreadRepository(db)
-	messageRepo := repository.NewMessageRepository(db)
-	threadService := services.NewThreadService(threadRepo)
-	messageService := services.NewMessageService(messageRepo)
-	aiChatbotService := services.NewAIChatbotService(cfg.AzureOpenAI, slackService, threadService, messageService)
-	go socket(slackClient, context.Background(), log, aiChatbotService)
+	// slackService := services.NewSlackService(&cfg.SlackConfig, slackClient)
+	// threadRepo := repository.NewThreadRepository(db)
+	// messageRepo := repository.NewMessageRepository(db)
+	// threadService := services.NewThreadService(threadRepo)
+	// messageService := services.NewMessageService(messageRepo)
+	// aiChatbotService := services.NewAIChatbotService(cfg.AzureOpenAI, slackService, threadService, messageService)
+	// go socket(slackClient, context.Background(), log, aiChatbotService)
 
 	// Start server
 	address := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
