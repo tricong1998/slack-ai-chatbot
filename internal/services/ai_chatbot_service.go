@@ -12,6 +12,7 @@ import (
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/config"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/dto"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/models"
+	"github.com/sotatek-dev/hyper-automation-chatbot/pkg/util"
 	"gorm.io/gorm"
 )
 
@@ -254,17 +255,17 @@ func (s *AIChatbotService) GetFileInformation(ctx context.Context, fileID string
 	return fileRes, nil
 }
 
-func (s *AIChatbotService) AddAndRunMessage(ctx context.Context, channelID *string, message string, userID string) (string, error) {
+func (s *AIChatbotService) AddAndRunMessage(ctx context.Context, channelID *string, message string, userID string) (string, string, error) {
 	thread, err := s.threadService.GetLatestOpenThreadByChannelAndUserID(*channelID, userID)
 	var threadID string
 	if err != nil {
 		if err != gorm.ErrRecordNotFound {
-			return "", err
+			return "", "", err
 		} else {
 			fmt.Println("create thread")
 			threadID, err = s.CreateThread(ctx)
 			if err != nil {
-				return "", err
+				return "", "", err
 			}
 			fmt.Println("create thread success")
 			s.threadService.CreateThread(&models.Thread{
@@ -281,14 +282,15 @@ func (s *AIChatbotService) AddAndRunMessage(ctx context.Context, channelID *stri
 	fmt.Println("threadID", threadID)
 	messageID, err := s.CreateMessage(ctx, threadID, message)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	fmt.Println("messageID", messageID)
-	runID, err := s.CreateRun(ctx, threadID, s.azureOpenAIConfig.AssistantId)
+	runID, err := s.CreateRun(ctx, threadID, s.azureOpenAIConfig.AssistantIdDetectAction)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	fmt.Println("runID", runID)
+	var action string
 	done := make(chan bool)
 	go func() {
 		ticker := time.NewTicker(3 * time.Second)
@@ -337,6 +339,8 @@ func (s *AIChatbotService) AddAndRunMessage(ctx context.Context, channelID *stri
 							// for _, annotation := range annotations {
 							if textContent.Text.Value != "" {
 								fmt.Println("textContent.Text.Value", textContent.Text.Value)
+								action = util.DetectAction(textContent.Text.Value)
+								fmt.Println("action", action)
 								s.slackService.SendMessage(ctx, channelID, textContent.Text.Value)
 							}
 						}
@@ -352,7 +356,43 @@ func (s *AIChatbotService) AddAndRunMessage(ctx context.Context, channelID *stri
 	}()
 
 	<-done
-	return messageID, nil
+	// go s.SendMessageCloseThreadAfter5Minutes(ctx, *channelID, threadID)
+	return messageID, action, nil
+}
+
+func (s *AIChatbotService) SendMessageCloseThreadAfter5Minutes(ctx context.Context, channelID string, threadID string) error {
+	timer := time.NewTimer(5 * time.Minute)
+	// eventChan <- struct{}{}
+	eventChan := make(chan struct{})
+
+	for {
+		select {
+		case <-timer.C:
+			// Timer expired, close the thread
+			// err := s.threadService.CloseThread(threadID)
+			// if err != nil {
+			// 	return fmt.Errorf("failed to close thread: %w", err)
+			// }
+			// message := "This thread has been inactive for 5 minutes and will now be closed."
+			// err = s.slackService.SendMessage(ctx, &channelID, message)
+			// if err != nil {
+			// 	return fmt.Errorf("failed to send closing message: %w", err)
+			// }
+			return nil
+
+		case <-eventChan:
+			// Event received, reset the timer
+			if !timer.Stop() {
+				<-timer.C
+			}
+			timer.Reset(5 * time.Minute)
+
+		case <-ctx.Done():
+			// Context cancelled, stop the timer and exit
+			timer.Stop()
+			return ctx.Err()
+		}
+	}
 }
 
 func (s *AIChatbotService) GetFirstConsecutiveAssistantMessages(messages []dto.AzureAIChatbotMessage) []dto.AzureAIChatbotMessage {

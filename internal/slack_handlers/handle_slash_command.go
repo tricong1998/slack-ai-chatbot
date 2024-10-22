@@ -15,7 +15,7 @@ func (s *SlackHandler) HandleSlashCommand(command slack.SlashCommand, client *sl
 		return handleHelloCommand(command, client), nil
 
 	case "/was-chatbot-useful":
-		return handleWasChatbotUsefulCommand(command, client)
+		return handleWasChatbotUsefulCommandWithForm(command, client)
 	}
 
 	return nil, nil
@@ -82,4 +82,89 @@ func handleWasChatbotUsefulCommand(command slack.SlashCommand, client *slack.Cli
 	attachment.Text = "Rate the tutorial"
 	attachment.Color = "#4af030"
 	return attachment, nil
+}
+
+func handleWasChatbotUsefulCommandWithButton(command slack.SlashCommand, client *slack.Client) (interface{}, error) {
+	attachment := slack.Attachment{}
+	yesButton := slack.NewButtonBlockElement("yes", "yes", &slack.TextBlockObject{Type: slack.PlainTextType, Text: "Yes"})
+	noButton := slack.NewButtonBlockElement("no", "no", &slack.TextBlockObject{Type: slack.PlainTextType, Text: "No"})
+
+	numberOfDays := 3
+	date := time.Now().Format("2006-01-02")
+	reason := "illness"
+	text := fmt.Sprintf("Do you want to take %d days off from %s due to %s?", numberOfDays, date, reason)
+
+	attachment.Blocks = slack.Blocks{
+		BlockSet: []slack.Block{
+			slack.NewSectionBlock(
+				&slack.TextBlockObject{
+					Type: slack.MarkdownType,
+					Text: text,
+				},
+				nil,
+				nil,
+			),
+			slack.NewActionBlock(
+				"chatbot_rating",
+				yesButton,
+				noButton,
+			),
+		},
+	}
+
+	attachment.Text = text
+	attachment.Color = "#4af030"
+	return attachment, nil
+}
+
+func handleWasChatbotUsefulCommandWithForm(command slack.SlashCommand, client *slack.Client) (interface{}, error) {
+	// Create a new modal view
+	modalView := slack.ModalViewRequest{
+		Type: slack.ViewType("modal"),
+		Title: &slack.TextBlockObject{
+			Type: slack.PlainTextType,
+			Text: "Rate the Chatbot",
+		},
+		Close: &slack.TextBlockObject{
+			Type: slack.PlainTextType,
+			Text: "Cancel",
+		},
+		Submit: &slack.TextBlockObject{
+			Type: slack.PlainTextType,
+			Text: "Submit",
+		},
+		Blocks: slack.Blocks{
+			BlockSet: []slack.Block{
+				slack.NewInputBlock(
+					"rating_block",
+					&slack.TextBlockObject{
+						Type: slack.PlainTextType,
+						Text: "Enter the rating",
+					},
+					&slack.TextBlockObject{
+						Type: slack.PlainTextType,
+						Text: "Enter a rating from 1 to 5",
+					},
+					&slack.PlainTextInputBlockElement{
+						Type:        slack.METPlainTextInput,
+						ActionID:    "rating_input",
+						Placeholder: &slack.TextBlockObject{Type: slack.PlainTextType, Text: "Enter a rating from 1 to 5"},
+						MaxLength:   1,
+					},
+				),
+			},
+		},
+	}
+
+	// Open the modal
+	_, err := client.OpenView(command.TriggerID, modalView)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open modal: %w", err)
+	}
+
+	// Return a response to acknowledge the command
+	return &slack.Msg{
+		ResponseType: slack.ResponseTypeEphemeral,
+		Text:         "Please rate the chatbot in the modal that just opened.",
+	}, nil
 }

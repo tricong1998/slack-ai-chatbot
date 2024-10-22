@@ -25,7 +25,7 @@ func (h *AIChatbotHandler) AddMessage(c *gin.Context) {
 		return
 	}
 
-	message, err := h.aiChatbotService.AddAndRunMessage(c.Request.Context(),
+	messageID, action, err := h.aiChatbotService.AddAndRunMessage(c.Request.Context(),
 		req.ChannelID,
 		req.Message,
 		req.UserID,
@@ -35,5 +35,5 @@ func (h *AIChatbotHandler) AddMessage(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": message})
+	c.JSON(http.StatusOK, gin.H{"messageID": messageID, "action": action})
 }

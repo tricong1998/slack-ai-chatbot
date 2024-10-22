@@ -21,6 +21,14 @@ type GSheetService struct {
 	DriveService *drive.Service
 }
 
+type IGSheetService interface {
+	ReadCandidateOffer(spreadsheetUrl string) ([]dto.SheetCandidateOffer, error)
+	CreateNewSheet(sheetName string) (*dto.CreateNewSheetResponse, error)
+	CreateNewSheetInSharedDrive(sheetName string, sharedDriveFolderId string) (*dto.CreateNewSheetResponse, error)
+	InsertDataToSheet(spreadsheetID string, sheetName string, data []dto.SheetCandidateOffer) error
+	HandleFileCandidateOffer(sheetUrl string) (*dto.CreateNewSheetResponse, error)
+}
+
 func NewGSheetService(service *sheets.Service, driveService *drive.Service) *GSheetService {
 	return &GSheetService{
 		SheetService: service,
@@ -28,8 +36,8 @@ func NewGSheetService(service *sheets.Service, driveService *drive.Service) *GSh
 	}
 }
 
-func (s *GSheetService) ReadCandidateOffer(spreadsheetId string) ([]dto.SheetCandidateOffer, error) {
-	spreadsheetID, err := google_internal.ExtractSheetIdFromUrl(spreadsheetId)
+func (s *GSheetService) ReadCandidateOffer(spreadsheetUrl string) ([]dto.SheetCandidateOffer, error) {
+	spreadsheetID, err := google_internal.ExtractSheetIdFromUrl(spreadsheetUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +62,7 @@ func (s *GSheetService) ReadCandidateOffer(spreadsheetId string) ([]dto.SheetCan
 	// var list []dto.SheetCandidateOffer
 	// can := util.ParseCandidateOffer[dto.SheetCandidateOffer](resp)
 	// list = append(list, can)
-	return list, nil
+	// return list, nil
 }
 
 func (s *GSheetService) CreateNewSheet(sheetName string) (*dto.CreateNewSheetResponse, error) {
@@ -144,3 +152,98 @@ func (s *GSheetService) HandleFileCandidateOffer(sheetUrl string) (*dto.CreateNe
 
 	return newEmployeeSkillFile, nil
 }
+
+// func (s *GSheetService) ReadSheetData(sheetUrl string) ([][]interface{}, []string, error) {
+// 	sheetID, err := google_internal.ExtractSheetIdFromUrl(sheetUrl)
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
+
+// 	resp, err := s.SheetService.Spreadsheets.Values.Get(sheetID, "A1:ZZ").Do()
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
+
+// 	if len(resp.Values) == 0 {
+// 		return nil, nil, fmt.Errorf("no data found")
+// 	}
+
+// 	headers := make([]string, len(resp.Values[0]))
+// 	for i, v := range resp.Values[0] {
+// 		headers[i] = fmt.Sprint(v)
+// 	}
+
+// 	return resp.Values[1:], headers, nil
+// }
+
+// func (s *GSheetService) applyMappings(candidateData [][]interface{}, mappings map[string]string) [][]interface{} {
+// 	var skillData [][]interface{}
+
+// 	// Create header row
+// 	headerRow := make([]interface{}, len(mappings))
+// 	for skillCol, _ := range mappings {
+// 		headerRow = append(headerRow, skillCol)
+// 	}
+// 	skillData = append(skillData, headerRow)
+
+// 	// Map data
+// 	for _, row := range candidateData {
+// 		newRow := make([]interface{}, len(mappings))
+// 		for skillCol, candidateCol := range mappings {
+// 			index := s.findIndex(candidateData[0], candidateCol)
+// 			if index != -1 && index < len(row) {
+// 				newRow = append(newRow, row[index])
+// 			} else {
+// 				newRow = append(newRow, "")
+// 			}
+// 		}
+// 		skillData = append(skillData, newRow)
+// 	}
+
+// 	return skillData
+// }
+
+// func (s *GSheetService) findIndex(slice []interface{}, value string) int {
+// 	for i, v := range slice {
+// 		if fmt.Sprint(v) == value {
+// 			return i
+// 		}
+// 	}
+// 	return -1
+// }
+
+// func (s *GSheetService) AIAssistedFillSkillFile(candidateSheetUrl, skillSheetUrl string) error {
+// 	// Read candidate data
+// 	candidateData, candidateHeaders, err := s.ReadSheetData(candidateSheetUrl)
+// 	if err != nil {
+// 		return fmt.Errorf("error reading candidate data: %v", err)
+// 	}
+
+// 	// Read skill sheet headers
+// 	_, skillHeaders, err := s.ReadSheetData(skillSheetUrl)
+// 	if err != nil {
+// 		return fmt.Errorf("error reading skill sheet headers: %v", err)
+// 	}
+
+// 	// Use AI to suggest mappings
+// 	mappings, err := ai_service.SuggestColumnMappings(candidateHeaders, skillHeaders)
+// 	if err != nil {
+// 		return fmt.Errorf("error suggesting column mappings: %v", err)
+// 	}
+
+// 	// Apply mappings to create skill data
+// 	skillData := s.applyMappings(candidateData, mappings)
+
+// 	// Insert data into skill sheet
+// 	skillSheetID, err := google_internal.ExtractSheetIdFromUrl(skillSheetUrl)
+// 	if err != nil {
+// 		return fmt.Errorf("error extracting skill sheet ID: %v", err)
+// 	}
+
+// 	err = s.InsertDataToSheet(skillSheetID, "A1", skillData)
+// 	if err != nil {
+// 		return fmt.Errorf("error inserting data into skill sheet: %v", err)
+// 	}
+
+// 	return nil
+// }

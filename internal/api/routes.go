@@ -34,7 +34,11 @@ func SetupRoutes(
 	userHandler := handlers.NewUserHandler(userService, jwtService)
 
 	slackService := services.NewSlackService(&config.SlackConfig, slackClient)
-	slackHandler := handlers.NewSlackHandler(slackService)
+	ggSheetService := services.NewGSheetService(
+		google_internal.GetSheetService(&config.Google),
+		google_internal.GetDriveService(&config.Google),
+	)
+	slackHandler := handlers.NewSlackHandler(slackService, ggSheetService)
 
 	threadRepo := repository.NewThreadRepository(db)
 	threadService := services.NewThreadService(threadRepo)
@@ -65,8 +69,10 @@ func SetupRoutes(
 
 	//TODO: remove after testing AI Chatbot, Slack done
 	slackRoutes := routes.Group("/slack")
+	slackRoutes.Use(slackHandler.VerifySlackRequest())
 	{
 		slackRoutes.POST("/send-message", slackHandler.SendMessage)
+		slackRoutes.POST("/actions", slackHandler.HandleBlockActions)
 	}
 
 	aiAssistantRoutes := routes.Group("/ai-assistant")
@@ -74,10 +80,7 @@ func SetupRoutes(
 		aiAssistantRoutes.POST("/add-message", aiChatbotHandler.AddMessage)
 	}
 
-	ggSheetService := google_internal.GetSheetService(&config.Google)
-	driveService := google_internal.GetDriveService(&config.Google)
-	sheetService := services.NewGSheetService(ggSheetService, driveService)
-	sheetHandler := handlers.NewSheetHandler(sheetService)
+	sheetHandler := handlers.NewSheetHandler(ggSheetService)
 	sheetRoutes := routes.Group("/sheets")
 	{
 		sheetRoutes.POST("/candidate-offer", sheetHandler.ReadCandidateOffer)

@@ -14,6 +14,8 @@ import (
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/api"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/config"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/database"
+	"github.com/sotatek-dev/hyper-automation-chatbot/internal/google_internal"
+	"github.com/sotatek-dev/hyper-automation-chatbot/internal/repository"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/services"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/slack_handlers"
 	"github.com/sotatek-dev/hyper-automation-chatbot/pkg/logger"
@@ -61,13 +63,23 @@ func runGinServer(
 		slack.OptionAppLevelToken(cfg.SlackConfig.Token),
 	)
 	api.SetupRoutes(routes, db, cfg, log, slackClient)
-	// slackService := services.NewSlackService(&cfg.SlackConfig, slackClient)
-	// threadRepo := repository.NewThreadRepository(db)
-	// messageRepo := repository.NewMessageRepository(db)
-	// threadService := services.NewThreadService(threadRepo)
-	// messageService := services.NewMessageService(messageRepo)
-	// aiChatbotService := services.NewAIChatbotService(cfg.AzureOpenAI, slackService, threadService, messageService)
-	// go socket(slackClient, context.Background(), log, aiChatbotService)
+	slackService := services.NewSlackService(&cfg.SlackConfig, slackClient)
+	threadRepo := repository.NewThreadRepository(db)
+	messageRepo := repository.NewMessageRepository(db)
+	threadService := services.NewThreadService(threadRepo)
+	messageService := services.NewMessageService(messageRepo)
+	aiChatbotService := services.NewAIChatbotService(cfg.AzureOpenAI, slackService, threadService, messageService)
+	ggSheetService := services.NewGSheetService(
+		google_internal.GetSheetService(&cfg.Google),
+		google_internal.GetDriveService(&cfg.Google),
+	)
+	go socket(slackClient,
+		context.Background(),
+		log,
+		aiChatbotService,
+		slackService,
+		ggSheetService,
+	)
 
 	// Start server
 	address := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
@@ -77,8 +89,8 @@ func runGinServer(
 	}
 }
 
-func socket(client *slack.Client, ctx context.Context, zerolog *zerolog.Logger, aiChatbotService *services.AIChatbotService) {
-	slackHandler := slack_handlers.NewSlackHandler(client, aiChatbotService)
+func socket(client *slack.Client, ctx context.Context, zerolog *zerolog.Logger, aiChatbotService *services.AIChatbotService, slackService *services.SlackService, ggSheetService *services.GSheetService) {
+	slackHandler := slack_handlers.NewSlackHandler(client, slackService, aiChatbotService, ggSheetService)
 	socketClient := socketmode.New(
 		client,
 		socketmode.OptionDebug(true),
@@ -127,8 +139,19 @@ func socket(client *slack.Client, ctx context.Context, zerolog *zerolog.Logger, 
 					}
 					// Dont forget to acknowledge the request
 					socketClient.Ack(*event.Request, payload)
+				case socketmode.EventTypeInteractive:
+					interactionCallback, ok := event.Data.(slack.InteractionCallback)
+					if !ok {
+						zerolog.Printf("Could not type cast the event to an InteractionCallback: %v\n", event)
+						continue
+					}
+					// handleSlashCommand will take care of the command
+					payload, err := slackHandler.HandleBlockAction(interactionCallback)
+					if err != nil {
+						zerolog.Error().Err(err).Msg("Cannot handle block actions")
+					}
+					socketClient.Ack(*event.Request, payload)
 				}
-
 			}
 		}
 	}(ctx, client, socketClient)

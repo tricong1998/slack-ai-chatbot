@@ -51,6 +51,7 @@ func (h *SheetHandler) CreateNewSheetInSharedDrive(c *gin.Context) {
 }
 
 func (h *SheetHandler) HandleFileCandidateOffer(c *gin.Context) {
+	fmt.Println("HandleFileCandidateOffer")
 	var req dto.ReadSheetCandidateOffer
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

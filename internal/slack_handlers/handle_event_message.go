@@ -18,6 +18,7 @@ func (s *SlackHandler) HandleEventMessage(event slackevents.EventsAPIEvent) erro
 	fmt.Println("asdfjaldkfjlkadjsflkds2", event.Type)
 	fmt.Printf("asdfjaldkfjlkadjsflkds3: %+v\n", event)
 	fmt.Printf("asdfjaldkfjlkadjsflkds4: %+v\n", reflect.TypeOf(event.InnerEvent.Data))
+
 	switch event.Type {
 	// First we check if this is an CallbackEvent
 	case slackevents.CallbackEvent:
@@ -78,7 +79,21 @@ func (s *SlackHandler) handleMessageEvent(event *slackevents.MessageEvent) error
 	// if err != nil {
 	// 	return err
 	// }
+	fmt.Println("event.BotID", event.BotID)
+	fmt.Println("event.SubType", event.SubType)
+	if event.BotID != "" || event.SubType == "bot_message" {
+		return nil
+	}
 	fmt.Println("asdfjaldkfjlkadjsflkds", event.Text)
-	s.aiChatbotService.AddAndRunMessage(context.Background(), &event.Channel, event.Text, event.User)
+	messageID, action, err := s.aiChatbotService.AddAndRunMessage(context.Background(), &event.Channel, event.Text, event.User)
+	if err != nil {
+		return err
+	}
+	fmt.Println("messageID", messageID)
+	fmt.Println("action", action)
+	switch action {
+	case "onboard_nhan_vien":
+		s.handleCandidateSheetEvent(event.Channel)
+	}
 	return nil
 }

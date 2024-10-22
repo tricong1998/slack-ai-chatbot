@@ -7,9 +7,11 @@ import (
 
 type SlackHandler struct {
 	slackClient      *slack.Client
+	slackService     *services.SlackService
 	aiChatbotService *services.AIChatbotService
+	ggSheetService   *services.GSheetService
 }
 
-func NewSlackHandler(slackClient *slack.Client, aiChatbotService *services.AIChatbotService) *SlackHandler {
-	return &SlackHandler{slackClient: slackClient, aiChatbotService: aiChatbotService}
+func NewSlackHandler(slackClient *slack.Client, slackService *services.SlackService, aiChatbotService *services.AIChatbotService, ggSheetService *services.GSheetService) *SlackHandler {
+	return &SlackHandler{slackClient: slackClient, slackService: slackService, aiChatbotService: aiChatbotService, ggSheetService: ggSheetService}
 }

@@ -27,17 +27,19 @@ type AuthConfig struct {
 }
 
 type SlackConfig struct {
-	WebhookURL string `mapstructure:"SLACK_WEBHOOK_URL"`
-	Channel    string `mapstructure:"SLACK_CHANNEL_ID"`
-	Token      string `mapstructure:"SLACK_TOKEN"`
-	BotToken   string `mapstructure:"SLACK_BOT_TOKEN"`
+	WebhookURL    string `mapstructure:"SLACK_WEBHOOK_URL"`
+	Channel       string `mapstructure:"SLACK_CHANNEL_ID"`
+	Token         string `mapstructure:"SLACK_TOKEN"`
+	BotToken      string `mapstructure:"SLACK_BOT_TOKEN"`
+	SigningSecret string `mapstructure:"SLACK_SIGNING_SECRET"`
 }
 
 type AzureOpenAIConfig struct {
-	Endpoint    string `mapstructure:"AZURE_OPENAI_ENDPOINT"`
-	Key         string `mapstructure:"AZURE_OPENAI_KEY"`
-	ApiVersion  string `mapstructure:"AZURE_OPENAI_API_VERSION"`
-	AssistantId string `mapstructure:"AZURE_OPENAI_ASSISTANT_ID"`
+	Endpoint                 string `mapstructure:"AZURE_OPENAI_ENDPOINT"`
+	Key                      string `mapstructure:"AZURE_OPENAI_KEY"`
+	ApiVersion               string `mapstructure:"AZURE_OPENAI_API_VERSION"`
+	AssistantIdDetectAction  string `mapstructure:"AZURE_OPENAI_ASSISTANT_ID_DETECT_ACTION"`
+	AssistantIdHeaderMapping string `mapstructure:"AZURE_OPENAI_ASSISTANT_ID_HEADER_MAPPING"`
 }
 
 type GoogleConfig struct {
