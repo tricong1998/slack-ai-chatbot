@@ -43,7 +43,6 @@ func (s *AIChatbotService) CreateThread(ctx context.Context) (string, error) {
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
-	fmt.Println("resp---", resp.Status, resp.StatusCode)
 	if err != nil {
 		return "", err
 	}
@@ -54,7 +53,6 @@ func (s *AIChatbotService) CreateThread(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Println("thread---", thread, body)
 	return thread.ID, nil
 }
 
@@ -191,7 +189,6 @@ func (s *AIChatbotService) ListMessages(ctx context.Context, threadID string) ([
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("body", body)
 	response := struct {
 		Data   []dto.AzureAIChatbotMessage `json:"data"`
 		Object string                      `json:"object"`
@@ -262,12 +259,10 @@ func (s *AIChatbotService) AddAndRunMessage(ctx context.Context, channelID *stri
 		if err != gorm.ErrRecordNotFound {
 			return "", "", err
 		} else {
-			fmt.Println("create thread")
 			threadID, err = s.CreateThread(ctx)
 			if err != nil {
 				return "", "", err
 			}
-			fmt.Println("create thread success")
 			s.threadService.CreateThread(&models.Thread{
 				ID:          threadID,
 				ChannelId:   *channelID,
@@ -275,21 +270,17 @@ func (s *AIChatbotService) AddAndRunMessage(ctx context.Context, channelID *stri
 			})
 		}
 	} else {
-		fmt.Println("threadID", threadID)
 		threadID = thread.ID
 	}
 
-	fmt.Println("threadID", threadID)
 	messageID, err := s.CreateMessage(ctx, threadID, message)
 	if err != nil {
 		return "", "", err
 	}
-	fmt.Println("messageID", messageID)
 	runID, err := s.CreateRun(ctx, threadID, s.azureOpenAIConfig.AssistantIdDetectAction)
 	if err != nil {
 		return "", "", err
 	}
-	fmt.Println("runID", runID)
 	var action string
 	done := make(chan bool)
 	go func() {
@@ -305,18 +296,14 @@ func (s *AIChatbotService) AddAndRunMessage(ctx context.Context, channelID *stri
 				if err != nil {
 					return
 				}
-				fmt.Println("runStatus", runStatus)
 				if runStatus != "queued" && runStatus != "in_progress" {
 					if runStatus == "completed" {
 						listMessages, err := s.ListMessages(ctx, threadID)
-						fmt.Println("listMessages", listMessages)
 						if err != nil {
-							fmt.Println("error list messages", err)
 							done <- true
 							return
 						}
 						consecutiveAssistantMessages := s.GetFirstConsecutiveAssistantMessages(listMessages)
-						fmt.Println("consecutiveAssistantMessages", consecutiveAssistantMessages)
 						for _, message := range consecutiveAssistantMessages {
 							var textContent *dto.AzureAIChatbotMessageContent
 							for _, content := range message.Content {
@@ -325,7 +312,6 @@ func (s *AIChatbotService) AddAndRunMessage(ctx context.Context, channelID *stri
 									break
 								}
 							}
-							fmt.Println("textContent", textContent)
 							if textContent == nil {
 								continue
 							}
@@ -338,9 +324,7 @@ func (s *AIChatbotService) AddAndRunMessage(ctx context.Context, channelID *stri
 							// }
 							// for _, annotation := range annotations {
 							if textContent.Text.Value != "" {
-								fmt.Println("textContent.Text.Value", textContent.Text.Value)
 								action = util.DetectAction(textContent.Text.Value)
-								fmt.Println("action", action)
 								s.slackService.SendMessage(ctx, channelID, textContent.Text.Value)
 							}
 						}

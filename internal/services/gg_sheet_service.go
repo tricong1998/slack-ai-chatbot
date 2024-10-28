@@ -75,7 +75,6 @@ func (s *GSheetService) CreateNewSheet(sheetName string) (*dto.CreateNewSheetRes
 	if err != nil {
 		log.Fatalf("Unable to create spreadsheet: %v", err)
 	}
-	fmt.Println("resp", resp)
 	url := fmt.Sprintf("https://docs.google.com/spreadsheets/d/%s", resp.SpreadsheetId)
 	return &dto.CreateNewSheetResponse{
 		SpreadsheetId:  resp.SpreadsheetId,
@@ -132,20 +131,17 @@ func (s *GSheetService) InsertDataToSheet(spreadsheetID string, sheetName string
 
 func (s *GSheetService) HandleFileCandidateOffer(sheetUrl string) (*dto.CreateNewSheetResponse, error) {
 	data, err := s.ReadCandidateOffer(sheetUrl)
-	fmt.Println("ReadCandidateOffer", data, err, sheetUrl)
 	if err != nil {
 		return nil, err
 	}
 
 	newSheetName := fmt.Sprintf("New Employee Skill - %s", time.Now().Format("2006-01-02"))
 	newEmployeeSkillFile, err := s.CreateNewSheetInSharedDrive(newSheetName, SharedDriveFolderId)
-	fmt.Println("newEmployeeSkillFile", newEmployeeSkillFile)
 	if err != nil {
 		return nil, err
 	}
 
 	err = s.InsertDataToSheet(newEmployeeSkillFile.SpreadsheetId, "A1:K20", data)
-	fmt.Println("InsertDataToSheet", err)
 	if err != nil {
 		return nil, err
 	}

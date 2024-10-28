@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -26,7 +25,6 @@ func (h *SheetHandler) ReadCandidateOffer(c *gin.Context) {
 
 	candidates, err := h.service.ReadCandidateOffer(req.SheetUrl)
 	if err != nil {
-		fmt.Println(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -51,7 +49,6 @@ func (h *SheetHandler) CreateNewSheetInSharedDrive(c *gin.Context) {
 }
 
 func (h *SheetHandler) HandleFileCandidateOffer(c *gin.Context) {
-	fmt.Println("HandleFileCandidateOffer")
 	var req dto.ReadSheetCandidateOffer
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

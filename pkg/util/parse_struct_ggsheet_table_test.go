@@ -1,7 +1,6 @@
 package util
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 )
@@ -26,8 +25,6 @@ func TestParseStructToSheetTable(t *testing.T) {
 		{"Doe", "35"},
 	}
 	result := ParseStructToSheetTable(data)
-
-	fmt.Println(result)
 
 	if len(result) != len(data)+1 {
 		t.Errorf("Expected %d rows, got %d", len(data)+1, len(result))

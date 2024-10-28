@@ -91,9 +91,7 @@ func ReadSheet(srv *sheets.Service, spreadsheetId, readRange string) {
 	}
 
 	if len(resp.Values) == 0 {
-		fmt.Println("No data found.")
 	} else {
-		fmt.Println("Name, Major:")
 		for _, row := range resp.Values {
 			fmt.Printf("%s, %s\n", row[0], row[1])
 		}

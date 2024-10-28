@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
@@ -14,17 +13,11 @@ import (
 
 // HandleEventMessage will take an event and handle it properly based on the type of event
 func (s *SlackHandler) HandleEventMessage(event slackevents.EventsAPIEvent) error {
-	fmt.Println("asdfjaldkfjlkadjsflkds", event.Data)
-	fmt.Println("asdfjaldkfjlkadjsflkds2", event.Type)
-	fmt.Printf("asdfjaldkfjlkadjsflkds3: %+v\n", event)
-	fmt.Printf("asdfjaldkfjlkadjsflkds4: %+v\n", reflect.TypeOf(event.InnerEvent.Data))
-
 	switch event.Type {
 	// First we check if this is an CallbackEvent
 	case slackevents.CallbackEvent:
 
 		innerEvent := event.InnerEvent
-		fmt.Println("ffff", innerEvent)
 		// Yet Another Type switch on the actual Data to see if its an AppMentionEvent
 		switch ev := innerEvent.Data.(type) {
 		case *slackevents.AppMentionEvent:
@@ -79,18 +72,13 @@ func (s *SlackHandler) handleMessageEvent(event *slackevents.MessageEvent) error
 	// if err != nil {
 	// 	return err
 	// }
-	fmt.Println("event.BotID", event.BotID)
-	fmt.Println("event.SubType", event.SubType)
 	if event.BotID != "" || event.SubType == "bot_message" {
 		return nil
 	}
-	fmt.Println("asdfjaldkfjlkadjsflkds", event.Text)
-	messageID, action, err := s.aiChatbotService.AddAndRunMessage(context.Background(), &event.Channel, event.Text, event.User)
+	_, action, err := s.aiChatbotService.AddAndRunMessage(context.Background(), &event.Channel, event.Text, event.User)
 	if err != nil {
 		return err
 	}
-	fmt.Println("messageID", messageID)
-	fmt.Println("action", action)
 	switch action {
 	case "onboard_nhan_vien":
 		s.handleCandidateSheetEvent(event.Channel)

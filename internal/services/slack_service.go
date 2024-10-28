@@ -31,9 +31,6 @@ func (s *SlackService) SendMessage(ctx context.Context, channelID *string, messa
 		Pretext: message,
 	}
 
-	fmt.Println("message", message)
-	fmt.Println("s", s)
-	fmt.Println("slackConfig", s.slackConfig)
 	channel := channelID
 	if channel == nil {
 		channel = &s.slackConfig.Channel

@@ -59,7 +59,6 @@ func ParseSheetIntoStructCb[K any](options Options, cb func(K)) (err error) {
 	var k K
 	spreadSheetId := options.SpreadsheetID
 	sheetName := pluralizeClient.Plural(reflect.TypeOf(k).Name())
-	fmt.Println("sheetName0", sheetName)
 
 	if options.SheetName != "" {
 		sheetName = options.SheetName
@@ -73,13 +72,10 @@ func ParseSheetIntoStructCb[K any](options Options, cb func(K)) (err error) {
 		return ErrNoSheetName
 	}
 
-	fmt.Println("sheetName", sheetName)
 	resp, err := options.Service.Spreadsheets.Values.Get(spreadSheetId, sheetName).Do()
 	if err != nil {
-		fmt.Println("---Get error", spreadSheetId)
 		return err
 	}
-	fmt.Println("resp ss", resp)
 
 	mappings, err := createMappings[K](resp)
 	if err != nil {

@@ -91,7 +91,6 @@ func (h *SlackHandler) SendMessage(ctx *gin.Context) {
 }
 
 func (s *SlackHandler) HandleBlockActions(c *gin.Context) {
-	fmt.Println("HandleBlockActions")
 	var payload slack.InteractionCallback
 	if err := c.BindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse action response"})

@@ -41,7 +41,7 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DOCKER_DB_PASSWORD}
       - DB_NAME=${USER_DB_NAME}
-    command: ./user
+    command: ./hyper_automatation_chatbot
     restart: always
 
 volumes:
