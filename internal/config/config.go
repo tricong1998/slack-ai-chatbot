@@ -46,13 +46,30 @@ type GoogleConfig struct {
 	Credentials string `mapstructure:"GOOGLE_CREDENTIALS"`
 }
 
+type UIPathConfig struct {
+	Host                          string `mapstructure:"UI_PATH_HOST"`
+	Tenant                        string `mapstructure:"UI_PATH_TENANT"`
+	TenantID                      string `mapstructure:"UI_PATH_TENANT_ID"`
+	ApiKey                        string `mapstructure:"UI_PATH_API_KEY"`
+	GreetingNewEmployeeProcessKey string `mapstructure:"UI_PATH_GREETING_NEW_EMPLOYEE_PROCESS_KEY"`
+}
+
+type RabbitMQConfig struct {
+	Host     string `mapstructure:"AMQP_SERVER_HOST"`
+	Port     string `mapstructure:"AMQP_SERVER_PORT"`
+	User     string `mapstructure:"AMQP_SERVER_USER"`
+	Password string `mapstructure:"AMQP_SERVER_PASSWORD"`
+}
+
 type Config struct {
-	Server      ServerConfig
-	DB          DBConfig
-	Auth        AuthConfig
-	SlackConfig SlackConfig
-	AzureOpenAI AzureOpenAIConfig
-	Google      GoogleConfig
+	Server         ServerConfig
+	DB             DBConfig
+	Auth           AuthConfig
+	SlackConfig    SlackConfig
+	AzureOpenAI    AzureOpenAIConfig
+	Google         GoogleConfig
+	UIPath         UIPathConfig
+	RabbitMQConfig RabbitMQConfig
 }
 
 func LoadConfig(path string) (Config, error) {
@@ -73,6 +90,8 @@ func LoadConfig(path string) (Config, error) {
 	var slackConfig SlackConfig
 	var azureOpenAI AzureOpenAIConfig
 	var google GoogleConfig
+	var uiPath UIPathConfig
+	var rabbitMQ RabbitMQConfig
 	err = viper.Unmarshal(&server)
 	if err != nil {
 		return Config{}, err
@@ -97,14 +116,24 @@ func LoadConfig(path string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	err = viper.Unmarshal(&uiPath)
+	if err != nil {
+		return Config{}, err
+	}
+	err = viper.Unmarshal(&rabbitMQ)
+	if err != nil {
+		return Config{}, err
+	}
 
 	config := Config{
-		Server:      server,
-		DB:          db,
-		Auth:        auth,
-		SlackConfig: slackConfig,
-		AzureOpenAI: azureOpenAI,
-		Google:      google,
+		Server:         server,
+		DB:             db,
+		Auth:           auth,
+		SlackConfig:    slackConfig,
+		AzureOpenAI:    azureOpenAI,
+		Google:         google,
+		UIPath:         uiPath,
+		RabbitMQConfig: rabbitMQ,
 	}
 	return config, nil
 }

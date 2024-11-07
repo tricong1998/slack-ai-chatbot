@@ -37,6 +37,7 @@ func Migrate(db *gorm.DB) error {
 		&models.UserPoint{},
 		&models.Thread{},
 		&models.Message{},
+		&models.UIPathJob{},
 		// Add other models here as needed
 	)
 }

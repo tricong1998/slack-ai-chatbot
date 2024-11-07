@@ -10,8 +10,9 @@ type SlackHandler struct {
 	slackService     *services.SlackService
 	aiChatbotService *services.AIChatbotService
 	ggSheetService   *services.GSheetService
+	uiPathJobService *services.UIPathJobService
 }
 
-func NewSlackHandler(slackClient *slack.Client, slackService *services.SlackService, aiChatbotService *services.AIChatbotService, ggSheetService *services.GSheetService) *SlackHandler {
-	return &SlackHandler{slackClient: slackClient, slackService: slackService, aiChatbotService: aiChatbotService, ggSheetService: ggSheetService}
+func NewSlackHandler(slackClient *slack.Client, slackService *services.SlackService, aiChatbotService *services.AIChatbotService, ggSheetService *services.GSheetService, uiPathJobService *services.UIPathJobService) *SlackHandler {
+	return &SlackHandler{slackClient: slackClient, slackService: slackService, aiChatbotService: aiChatbotService, ggSheetService: ggSheetService, uiPathJobService: uiPathJobService}
 }

@@ -7,19 +7,18 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 	"github.com/slack-go/slack/socketmode"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/api"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/config"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/database"
-	"github.com/sotatek-dev/hyper-automation-chatbot/internal/google_internal"
-	"github.com/sotatek-dev/hyper-automation-chatbot/internal/repository"
-	"github.com/sotatek-dev/hyper-automation-chatbot/internal/services"
+	"github.com/sotatek-dev/hyper-automation-chatbot/internal/dto"
+	"github.com/sotatek-dev/hyper-automation-chatbot/internal/rabbit_handler"
+	"github.com/sotatek-dev/hyper-automation-chatbot/internal/shared"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/slack_handlers"
 	"github.com/sotatek-dev/hyper-automation-chatbot/pkg/logger"
-	"gorm.io/gorm"
+	"github.com/sotatek-dev/hyper-automation-chatbot/pkg/rabbitmq"
 )
 
 func main() {
@@ -47,52 +46,74 @@ func main() {
 		log.Fatal().Err(err).Msg("Cannot connect rabbit")
 	}
 
-	runGinServer(&cfg, db, &log)
+	rabbitConfig := rabbitmq.RabbitMQConfig{
+		Host:     cfg.RabbitMQConfig.Host,
+		Port:     cfg.RabbitMQConfig.Port,
+		User:     cfg.RabbitMQConfig.User,
+		Password: cfg.RabbitMQConfig.Password,
+	}
+	rabbitConn, err := rabbitmq.NewRabbitMQConn(&rabbitConfig, context.Background())
+	if err != nil {
+		log.Fatal().Err(err).Msg("Cannot connect rabbit")
+	}
+	dependencies := shared.InitDependencies(db, rabbitConn, &cfg)
+	welcomeNewEmployeeDependencies := rabbit_handler.WelcomeNewEmployeeDependencies{
+		UIPathJobService: dependencies.UIPathJobService,
+		Logger:           dependencies.Logger,
+	}
+	greetingConsumer := rabbitmq.NewConsumer[*rabbit_handler.WelcomeNewEmployeeDependencies](
+		context.Background(),
+		&rabbitConfig,
+		rabbitConn,
+		*dependencies.Logger,
+		rabbit_handler.HandlePollingCheckUIPathJob,
+		rabbitmq.HYPER_AUTOMATE_CHATBOT,
+		"direct",
+		rabbitmq.WELCOME_NEW_EMPLOYEE_QUEUE,
+		rabbitmq.WELCOME_NEW_EMPLOYEE_QUEUE,
+	)
+	go func() {
+		err := greetingConsumer.ConsumeMessage(dto.CreateUserPoint{}, &welcomeNewEmployeeDependencies)
+		if err != nil {
+			log.Error().Err(err).Msg("Consume message error")
+		}
+	}()
+
+	go socket(
+		context.Background(),
+		&dependencies,
+	)
+	// dependencies.UIPathJobService.PollingCheck(418824812)
+	runGinServer(&dependencies)
 }
 
 func runGinServer(
-	cfg *config.Config,
-	db *gorm.DB,
-	log *zerolog.Logger,
+	dependencies *shared.AppDependencies,
 ) {
 	// Initialize router
 	routes := gin.Default()
-	slackClient := slack.New(
-		cfg.SlackConfig.BotToken,
-		slack.OptionDebug(true),
-		slack.OptionAppLevelToken(cfg.SlackConfig.Token),
-	)
-	api.SetupRoutes(routes, db, cfg, log, slackClient)
-	slackService := services.NewSlackService(&cfg.SlackConfig, slackClient)
-	threadRepo := repository.NewThreadRepository(db)
-	messageRepo := repository.NewMessageRepository(db)
-	threadService := services.NewThreadService(threadRepo)
-	messageService := services.NewMessageService(messageRepo)
-	aiChatbotService := services.NewAIChatbotService(cfg.AzureOpenAI, slackService, threadService, messageService)
-	ggSheetService := services.NewGSheetService(
-		google_internal.GetSheetService(&cfg.Google),
-		google_internal.GetDriveService(&cfg.Google),
-	)
-	go socket(slackClient,
-		context.Background(),
-		log,
-		aiChatbotService,
-		slackService,
-		ggSheetService,
-	)
+	api.SetupRoutes(routes, dependencies)
 
 	// Start server
-	address := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
+	address := fmt.Sprintf("%s:%s", dependencies.Config.Server.Host, dependencies.Config.Server.Port)
 	err := routes.Run(address)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Cannot run server")
+		dependencies.Logger.Fatal().Err(err).Msg("Cannot run server")
 	}
 }
 
-func socket(client *slack.Client, ctx context.Context, zerolog *zerolog.Logger, aiChatbotService *services.AIChatbotService, slackService *services.SlackService, ggSheetService *services.GSheetService) {
-	slackHandler := slack_handlers.NewSlackHandler(client, slackService, aiChatbotService, ggSheetService)
+func socket(ctx context.Context,
+	dependencies *shared.AppDependencies,
+) {
+	slackHandler := slack_handlers.NewSlackHandler(
+		dependencies.SlackClient,
+		dependencies.SlackService,
+		dependencies.AiChatbotService,
+		dependencies.GgSheetService,
+		dependencies.UIPathJobService,
+	)
 	socketClient := socketmode.New(
-		client,
+		dependencies.SlackClient,
 		socketmode.OptionDebug(true),
 		// Option to set a custom logger
 		socketmode.OptionLog(log.New(os.Stdout, "socketmode: ", log.Lshortfile|log.LstdFlags)),
@@ -104,7 +125,7 @@ func socket(client *slack.Client, ctx context.Context, zerolog *zerolog.Logger, 
 			select {
 			// inscase context cancel is called exit the goroutine
 			case <-ctx.Done():
-				zerolog.Println("Shutting down socketmode listener")
+				dependencies.Logger.Println("Shutting down socketmode listener")
 				return
 			case event := <-socketClient.Events:
 				// We have a new Events, let's type switch the event
@@ -115,7 +136,7 @@ func socket(client *slack.Client, ctx context.Context, zerolog *zerolog.Logger, 
 					// The Event sent on the channel is not the same as the EventAPI events so we need to type cast it
 					eventsAPIEvent, ok := event.Data.(slackevents.EventsAPIEvent)
 					if !ok {
-						zerolog.Printf("Could not type cast the event to the EventsAPIEvent: %v\n", event)
+						dependencies.Logger.Printf("Could not type cast the event to the EventsAPIEvent: %v\n", event)
 						continue
 					}
 					// We need to send an Acknowledge to the slack server
@@ -123,7 +144,7 @@ func socket(client *slack.Client, ctx context.Context, zerolog *zerolog.Logger, 
 					// Now we have an Events API event, but this event type can in turn be many types, so we actually need another type switch
 					err := slackHandler.HandleEventMessage(eventsAPIEvent)
 					if err != nil {
-						zerolog.Error().Err(err).Msg("Cannot handle event message")
+						dependencies.Logger.Error().Err(err).Msg("Cannot handle event message")
 					}
 				case socketmode.EventTypeSlashCommand:
 					// Just like before, type cast to the correct event type, this time a SlashEvent
@@ -142,19 +163,19 @@ func socket(client *slack.Client, ctx context.Context, zerolog *zerolog.Logger, 
 				case socketmode.EventTypeInteractive:
 					interactionCallback, ok := event.Data.(slack.InteractionCallback)
 					if !ok {
-						zerolog.Printf("Could not type cast the event to an InteractionCallback: %v\n", event)
+						dependencies.Logger.Printf("Could not type cast the event to an InteractionCallback: %v\n", event)
 						continue
 					}
 					// handleSlashCommand will take care of the command
 					payload, err := slackHandler.HandleBlockAction(interactionCallback)
 					if err != nil {
-						zerolog.Error().Err(err).Msg("Cannot handle block actions")
+						dependencies.Logger.Error().Err(err).Msg("Cannot handle block actions")
 					}
 					socketClient.Ack(*event.Request, payload)
 				}
 			}
 		}
-	}(ctx, client, socketClient)
+	}(ctx, dependencies.SlackClient, socketClient)
 
 	socketClient.Run()
 }

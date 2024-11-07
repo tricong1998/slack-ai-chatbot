@@ -23,13 +23,29 @@ services:
       timeout: 5s
       retries: 5
 
+  message-broker:
+    image: rabbitmq:3-management-alpine
+    container_name: message-broker
+    ports:
+      - "${AMQP_SERVER_PORT}:${AMQP_SERVER_PORT}" # for sender and consumer connections
+      - "${AMQP_SERVER_GUI_PORT}:${AMQP_SERVER_GUI_PORT}" # for serve RabbitMQ GUI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - hyper-automation-chatbot-network  
+    healthcheck:
+      test: >
+        /bin/sh -c "rabbitmqctl status"
+      interval: 5s
+      timeout: 5s
+      retries: 5      
+
   chatbot-service:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "${USER_SERVER_PORT}:${USER_SERVER_PORT}"
-      - "${USER_GRPC_SERVER_PORT}:${USER_GRPC_SERVER_PORT}"
+      - "${SERVER_PORT}:${SERVER_PORT}"
     depends_on:
       - message-broker
       - postgres
@@ -40,12 +56,13 @@ services:
       - DB_PORT=${DOCKER_DB_PORT}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DOCKER_DB_PASSWORD}
-      - DB_NAME=${USER_DB_NAME}
+      - DB_NAME=${DB_NAME}
     command: ./hyper_automatation_chatbot
     restart: always
 
 volumes:
   postgres-data:
+  rabbitmq_data:
 
 networks:
   hyper-automation-chatbot-network:

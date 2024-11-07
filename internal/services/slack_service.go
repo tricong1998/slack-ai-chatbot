@@ -81,8 +81,8 @@ func (s *SlackService) SendCandidateFileForm(ctx context.Context, channelID stri
 		slack.NewActionBlock(
 			"submit_candidate_file",
 			slack.NewButtonBlockElement(
-				"submit",
-				"submit",
+				"submit_candidate_file",
+				"submit_candidate_file",
 				slack.NewTextBlockObject("plain_text", "Submit", false, false),
 			),
 		),
@@ -115,6 +115,80 @@ func (s *SlackService) SendConfirmCloseThread(ctx context.Context, channelID str
 			),
 		),
 	}
+	_, _, err := s.slackClient.PostMessage(channelID, slack.MsgOptionBlocks(blocks...))
+	if err != nil {
+		return fmt.Errorf("failed to post message: %w", err)
+	}
+	return nil
+}
+
+func (s *SlackService) SendWelcomeNewEmployeeForm(ctx context.Context, channelID string) error {
+	blocks := []slack.Block{
+		slack.NewSectionBlock(
+			slack.NewTextBlockObject("mrkdwn", "Please enter the candidate file link (google sheet)", false, false),
+			nil,
+			nil,
+		),
+		slack.NewInputBlock(
+			"skill_file",
+			&slack.TextBlockObject{
+				Type:     slack.PlainTextType,
+				Text:     "Skill File",
+				Emoji:    false,
+				Verbatim: false,
+			},
+			&slack.TextBlockObject{
+				Type:     slack.PlainTextType,
+				Text:     "Enter the skill file link (google sheet)",
+				Emoji:    false,
+				Verbatim: false,
+			},
+			&slack.PlainTextInputBlockElement{
+				Type:        slack.METPlainTextInput,
+				ActionID:    "skill_file_input",
+				Placeholder: &slack.TextBlockObject{Type: slack.PlainTextType, Text: "Enter the candidate file link (google sheet)"},
+				MinLength:   5,   // Minimum length for a valid email
+				MaxLength:   254, // Maximum length per RFC 5321
+				DispatchActionConfig: &slack.DispatchActionConfig{
+					TriggerActionsOn: []string{"on_enter_pressed"},
+				},
+			},
+		),
+		slack.NewInputBlock(
+			"personal_email",
+			&slack.TextBlockObject{
+				Type:     slack.PlainTextType,
+				Text:     "Personal Email",
+				Emoji:    false,
+				Verbatim: false,
+			},
+			&slack.TextBlockObject{
+				Type:     slack.PlainTextType,
+				Text:     "Enter the personal email",
+				Emoji:    false,
+				Verbatim: false,
+			},
+			&slack.PlainTextInputBlockElement{
+				Type:        slack.METPlainTextInput,
+				ActionID:    "personal_email_input",
+				Placeholder: &slack.TextBlockObject{Type: slack.PlainTextType, Text: "Enter the personal email"},
+				MinLength:   5,   // Minimum length for a valid email
+				MaxLength:   254, // Maximum length per RFC 5321
+				DispatchActionConfig: &slack.DispatchActionConfig{
+					TriggerActionsOn: []string{"on_enter_pressed"},
+				},
+			},
+		),
+		slack.NewActionBlock(
+			"submit_welcome_new_employee",
+			slack.NewButtonBlockElement(
+				"submit_welcome_new_employee",
+				"submit_welcome_new_employee",
+				slack.NewTextBlockObject("plain_text", "Submit", false, false),
+			),
+		),
+	}
+
 	_, _, err := s.slackClient.PostMessage(channelID, slack.MsgOptionBlocks(blocks...))
 	if err != nil {
 		return fmt.Errorf("failed to post message: %w", err)

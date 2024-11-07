@@ -6,7 +6,7 @@ import (
 )
 
 func DetectAction(text string) string {
-	actionPattern := regexp.MustCompile(`(?i)action:\s*(\w+)$`)
+	actionPattern := regexp.MustCompile(`(?i)action:\s*([\w_]+)[\s\)]*$`)
 	match := actionPattern.FindStringSubmatch(strings.TrimSpace(text))
 
 	// If a match is found, return the action name
