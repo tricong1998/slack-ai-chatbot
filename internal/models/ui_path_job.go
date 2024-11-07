@@ -15,5 +15,8 @@ type UIPathJob struct {
 }
 
 const (
-	JobTypeGreeting = "welcome_new_employee"
+	JobTypeGreeting              = "welcome_new_employee"
+	JobTypeFillBuddyForm         = "fill_buddy_form"
+	JobTypeIntegrateTrainingForm = "integrate_training_form"
+	JobTypeCreateLeaveRequest    = "create_leave_request"
 )

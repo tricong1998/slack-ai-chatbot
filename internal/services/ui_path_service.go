@@ -3,6 +3,7 @@ package services
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -27,27 +28,6 @@ func NewUIPathService(client *http.Client, config config.UIPathConfig) *UIPathSe
 		client: client,
 		config: config,
 	}
-}
-
-func (s *UIPathService) GreetingNewEmployee(body dto.UIPathGreetingNewEmployee) (dto.UIPathTriggerResponse, error) {
-	fmt.Println("GreetingNewEmployee")
-	fmt.Println(s.config.GreetingNewEmployeeProcessKey)
-	url := s.GetUrlTrigger(s.config.GreetingNewEmployeeProcessKey)
-	resp, err := s.Call("POST", url, body)
-	if err != nil {
-		return dto.UIPathTriggerResponse{}, err
-	}
-	defer resp.Body.Close() // Add this line to close the body after we're done with it
-
-	var data dto.UIPathTriggerResponse
-	fmt.Println(resp)
-	fmt.Println(url)
-	err = json.NewDecoder(resp.Body).Decode(&data)
-	if err != nil {
-		return dto.UIPathTriggerResponse{}, err
-	}
-
-	return data, nil
 }
 
 func (s *UIPathService) GetJobDetails(jobID int) (dto.UIPathJobDetails, error) {
@@ -96,4 +76,46 @@ func (s *UIPathService) Call(method string, path string, body interface{}) (*htt
 	// defer resp.Body.Close()
 
 	return resp, nil
+}
+
+func (s *UIPathService) GreetingNewEmployee(body dto.UIPathGreetingNewEmployee) (*dto.UIPathTriggerResponse, error) {
+	return s.CallPostTriggerJob(body, s.config.GreetingNewEmployeeProcessKey)
+}
+
+func (s *UIPathService) FillBuddyForm(body dto.UIPathFillBuddyInput) (*dto.UIPathTriggerResponse, error) {
+	return s.CallPostTriggerJob(body, s.config.FillBuddyProcessKey)
+}
+
+func (s *UIPathService) CreateLeaveRequestOnOdoo(body dto.UIPathCreateLeaveRequestInput) (*dto.UIPathTriggerResponse, error) {
+	return s.CallPostTriggerJob(body, s.config.CreateLeaveRequestProcessKey)
+}
+
+func (s *UIPathService) CreateIntegrateTraining(body dto.UIPathCreateIntegrateTrainingInput) (*dto.UIPathTriggerResponse, error) {
+	return s.CallPostTriggerJob(body, s.config.CreateIntegrateTrainingProcessKey)
+}
+
+func (s *UIPathService) CallPostTriggerJob(body interface{}, key string) (*dto.UIPathTriggerResponse, error) {
+	url := s.GetUrlTrigger(key)
+	fmt.Println("url-=-=-=-", url, body)
+	resp, err := s.Call("POST", url, body)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 202 {
+		var error dto.UIPathErrorTriggerJob
+		err = json.NewDecoder(resp.Body).Decode(&error)
+		if err != nil {
+			return nil, err
+		}
+		return nil, errors.New(error.Message)
+	}
+	var data dto.UIPathTriggerResponse
+	fmt.Println(resp)
+	fmt.Println(url)
+	err = json.NewDecoder(resp.Body).Decode(&data)
+	if err != nil {
+		return nil, err
+	}
+	return &data, nil
 }

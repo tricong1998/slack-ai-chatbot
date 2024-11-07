@@ -99,7 +99,7 @@ func (c Consumer[T]) ConsumeMessage(msg interface{}, dependencies T) error {
 		for delivery := range deliveries {
 			err := c.handler(q.Name, delivery, dependencies)
 			if err != nil {
-				c.log.Fatal().Err(err).Msg(err.Error())
+				c.log.Error().Err(err).Msg(err.Error())
 			}
 
 			fmt.Println("delivery", delivery)

@@ -9,15 +9,15 @@ import (
 	"github.com/streadway/amqp"
 )
 
-type WelcomeNewEmployeeDependencies struct {
+type PollingCheckUIPathJobDependencies struct {
 	UIPathJobService *services.UIPathJobService
 	Logger           *zerolog.Logger
 }
 
-func HandlePollingCheckUIPathJob(queue string, msg amqp.Delivery, dependencies *WelcomeNewEmployeeDependencies) error {
+func HandlePollingCheckUIPathJob(queue string, msg amqp.Delivery, dependencies *PollingCheckUIPathJobDependencies) error {
 	dependencies.Logger.Info().Msgf("Message received on queue: %s with message: %s", queue, string(msg.Body))
 
-	var input dto.UIPathGreetingJobInput
+	var input dto.UIPathCheckingJobInput
 	if err := json.Unmarshal(msg.Body, &input); err != nil {
 		return err
 	}

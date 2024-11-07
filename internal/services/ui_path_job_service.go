@@ -15,7 +15,7 @@ import (
 type UIPathJobService struct {
 	uiPathJobRepository   *repository.UIPathJobRepository
 	UIPathService         *UIPathService
-	slackService          *SlackService
+	SlackService          *SlackService
 	pollingCheckPublisher rabbitmq.IPublisher
 }
 
@@ -24,7 +24,7 @@ func NewUIPathJobService(uiPathJobRepository *repository.UIPathJobRepository, po
 		uiPathJobRepository:   uiPathJobRepository,
 		pollingCheckPublisher: pollingCheckPublisher,
 		UIPathService:         uiPathService,
-		slackService:          slackService,
+		SlackService:          slackService,
 	}
 }
 
@@ -38,12 +38,41 @@ func (s *UIPathJobService) PollingCheck(jobID int) (bool, error) {
 	for range ticker.C {
 		job, err := s.GetJob(jobID)
 		if err != nil {
+			s.SlackService.SendMessage(context.Background(), &job.SlackChannel, err.Error())
 			return false, err
 		}
 		switch job.JobType {
 		case models.JobTypeGreeting:
 			completed, err := s.HandleCheckGreetingJobPolling(job)
 			if err != nil {
+				s.SlackService.SendMessage(context.Background(), &job.SlackChannel, err.Error())
+				return false, err
+			}
+			if completed {
+				return true, nil
+			}
+		case models.JobTypeFillBuddyForm:
+			completed, err := s.HandleCheckFillBuddyFormJobPolling(job)
+			if err != nil {
+				s.SlackService.SendMessage(context.Background(), &job.SlackChannel, err.Error())
+				return false, err
+			}
+			if completed {
+				return true, nil
+			}
+		case models.JobTypeCreateLeaveRequest:
+			completed, err := s.HandleCheckCreateLeaveRequestJobPolling(job)
+			if err != nil {
+				s.SlackService.SendMessage(context.Background(), &job.SlackChannel, err.Error())
+				return false, err
+			}
+			if completed {
+				return true, nil
+			}
+		case models.JobTypeIntegrateTrainingForm:
+			completed, err := s.HandleCheckCreateIntegrateTrainingJobPolling(job)
+			if err != nil {
+				s.SlackService.SendMessage(context.Background(), &job.SlackChannel, err.Error())
 				return false, err
 			}
 			if completed {
@@ -58,7 +87,7 @@ func (s *UIPathJobService) HandleCheckGreetingJobPolling(job *models.UIPathJob) 
 	status, output, err := s.CheckAndUpdateJobStatus(job.JobID)
 	if err != nil {
 		str := "Sorry, something went wrong. Please try again later."
-		s.slackService.SendMessage(context.Background(), &job.SlackChannel, str)
+		s.SlackService.SendMessage(context.Background(), &job.SlackChannel, str)
 		return true, err
 	}
 	if status == JobStatusCompleted {
@@ -67,16 +96,111 @@ func (s *UIPathJobService) HandleCheckGreetingJobPolling(job *models.UIPathJob) 
 		fmt.Println("err----", err)
 		if err != nil {
 			str := "Sorry, something went wrong. Please try again later."
-			s.slackService.SendMessage(context.Background(), &job.SlackChannel, str)
+			s.SlackService.SendMessage(context.Background(), &job.SlackChannel, str)
 			return true, err
 		}
 		fmt.Println("uiPathGreetingOutput.Greeting----", uiPathGreetingOutput.Greeting)
 		fmt.Println("job.SlackChannel----", job.SlackChannel)
-		s.slackService.SendMessage(context.Background(), &job.SlackChannel, uiPathGreetingOutput.Greeting)
+		s.SlackService.SendMessage(context.Background(), &job.SlackChannel, uiPathGreetingOutput.Greeting)
 		return true, nil
 	} else if status == JobStatusFailed {
 		str := "Sorry, something went wrong. Please try again later."
-		s.slackService.SendMessage(context.Background(), &job.SlackChannel, str)
+		s.SlackService.SendMessage(context.Background(), &job.SlackChannel, str)
+		return true, nil
+	}
+	return false, nil
+}
+
+func (s *UIPathJobService) HandleCheckFillBuddyFormJobPolling(job *models.UIPathJob) (bool, error) {
+	status, output, err := s.CheckAndUpdateJobStatus(job.JobID)
+	if err != nil {
+		str := "Sorry, something went wrong. Please try again later."
+		s.SlackService.SendMessage(context.Background(), &job.SlackChannel, str)
+		return true, err
+	}
+	if status == JobStatusCompleted {
+		uiPathFillBuddyOutput := dto.UIPathFillBuddyOutput{}
+		err := json.Unmarshal([]byte(output), &uiPathFillBuddyOutput)
+		fmt.Println("err----", err)
+		if err != nil {
+			str := "Sorry, something went wrong. Please try again later."
+			s.SlackService.SendMessage(context.Background(), &job.SlackChannel, str)
+			return true, err
+		}
+		fmt.Println("uiPathFillBuddyOutput.BuddyFormName----", uiPathFillBuddyOutput.BuddyFormName)
+		fmt.Println("job.SlackChannel----", job.SlackChannel)
+		response := fmt.Sprintf("Buddy form created successfully. Please check file %s", uiPathFillBuddyOutput.BuddyFormName)
+		s.SlackService.SendMessage(context.Background(), &job.SlackChannel, response)
+		return true, nil
+	} else if status == JobStatusFailed {
+		str := "Sorry, something went wrong. Please try again later."
+		s.SlackService.SendMessage(context.Background(), &job.SlackChannel, str)
+		return true, nil
+	}
+	return false, nil
+}
+
+func (s *UIPathJobService) HandleCheckCreateLeaveRequestJobPolling(job *models.UIPathJob) (bool, error) {
+	status, output, err := s.CheckAndUpdateJobStatus(job.JobID)
+	if err != nil {
+		str := "Sorry, something went wrong. Please try again later."
+		s.SlackService.SendMessage(context.Background(), &job.SlackChannel, str)
+		return true, err
+	}
+	if status == JobStatusCompleted {
+		uiPathCreateLeaveRequestOutput := dto.UIPathLeaveOutput{}
+		err := json.Unmarshal([]byte(output), &uiPathCreateLeaveRequestOutput)
+		if err != nil {
+			return true, err
+		}
+		var uiPathCreateLeaveRequestOutputResponse dto.UIPathLeaveOutputResponse
+		err = json.Unmarshal([]byte(uiPathCreateLeaveRequestOutput.Response), &uiPathCreateLeaveRequestOutputResponse)
+		if err != nil {
+			return true, err
+		}
+		if uiPathCreateLeaveRequestOutputResponse.Result != nil {
+			if uiPathCreateLeaveRequestOutputResponse.Result.Code == 200 {
+				str := "Leave request created successfully. Please check your calendar."
+				s.SlackService.SendMessage(context.Background(), &job.SlackChannel, str)
+				return true, nil
+			}
+		}
+		if uiPathCreateLeaveRequestOutputResponse.Error != nil {
+			err = fmt.Errorf(uiPathCreateLeaveRequestOutputResponse.Error.Data.Message)
+			return true, err
+		}
+		err = fmt.Errorf("sorry, something went wrong - please try again later")
+		return true, err
+	} else if status == JobStatusFailed {
+		str := "Sorry, something went wrong. Please try again later."
+		s.SlackService.SendMessage(context.Background(), &job.SlackChannel, str)
+		return true, nil
+	}
+	return false, nil
+}
+
+func (s *UIPathJobService) HandleCheckCreateIntegrateTrainingJobPolling(job *models.UIPathJob) (bool, error) {
+	status, output, err := s.CheckAndUpdateJobStatus(job.JobID)
+	if err != nil {
+		str := "Sorry, something went wrong. Please try again later."
+		s.SlackService.SendMessage(context.Background(), &job.SlackChannel, str)
+		return true, err
+	}
+	if status == JobStatusCompleted {
+		uiPathCreateIntegrateTrainingOutput := dto.UIPathCreateIntegrateTrainingOutput{}
+		err := json.Unmarshal([]byte(output), &uiPathCreateIntegrateTrainingOutput)
+		if err != nil {
+			return true, err
+		}
+		if uiPathCreateIntegrateTrainingOutput.CalendarId != "" {
+			s.SlackService.SendMessage(context.Background(), &job.SlackChannel, uiPathCreateIntegrateTrainingOutput.CalendarId)
+			return true, nil
+		}
+		err = fmt.Errorf(uiPathCreateIntegrateTrainingOutput.ErrMessage)
+		return true, err
+	} else if status == JobStatusFailed {
+		str := "Sorry, something went wrong. Please try again later."
+		s.SlackService.SendMessage(context.Background(), &job.SlackChannel, str)
 		return true, nil
 	}
 	return false, nil
@@ -135,6 +259,64 @@ func (s *UIPathJobService) CreateGreetingJob(input dto.UIPathGreetingNewEmployee
 	if err != nil {
 		return err
 	}
-	s.pollingCheckPublisher.PublishMessage(dto.UIPathGreetingJobInput{JobID: job.JobID})
+	s.pollingCheckPublisher.PublishMessage(dto.UIPathCheckingJobInput{JobID: job.JobID})
+	return nil
+}
+
+func (s *UIPathJobService) CreateFillBuddyJob(input dto.UIPathFillBuddyInput, slackChannel string) error {
+	uiJob, err := s.UIPathService.FillBuddyForm(input)
+	fmt.Println("CreateFillBuddyJob")
+	fmt.Println("uiJob", uiJob)
+	fmt.Println("err", err)
+	if err != nil {
+		return err
+	}
+	job := &models.UIPathJob{
+		JobID:        uiJob.ID,
+		JobType:      models.JobTypeFillBuddyForm,
+		SlackChannel: slackChannel,
+	}
+	err = s.uiPathJobRepository.CreateJob(job)
+	if err != nil {
+		return err
+	}
+	s.pollingCheckPublisher.PublishMessage(dto.UIPathCheckingJobInput{JobID: job.JobID})
+	return nil
+}
+
+func (s *UIPathJobService) CreateIntegrateTrainingJob(input dto.UIPathCreateIntegrateTrainingInput, slackChannel string) error {
+	uiJob, err := s.UIPathService.CreateIntegrateTraining(input)
+	if err != nil {
+		return err
+	}
+	fmt.Println("uiJob, err", uiJob, err)
+	job := &models.UIPathJob{
+		JobID:        uiJob.ID,
+		JobType:      models.JobTypeIntegrateTrainingForm,
+		SlackChannel: slackChannel,
+	}
+	err = s.uiPathJobRepository.CreateJob(job)
+	if err != nil {
+		return err
+	}
+	s.pollingCheckPublisher.PublishMessage(dto.UIPathCheckingJobInput{JobID: job.JobID})
+	return nil
+}
+
+func (s *UIPathJobService) CreateLeaveRequestJob(input dto.UIPathCreateLeaveRequestInput, slackChannel string) error {
+	uiJob, err := s.UIPathService.CreateLeaveRequestOnOdoo(input)
+	if err != nil {
+		return err
+	}
+	job := &models.UIPathJob{
+		JobID:        uiJob.ID,
+		JobType:      models.JobTypeCreateLeaveRequest,
+		SlackChannel: slackChannel,
+	}
+	err = s.uiPathJobRepository.CreateJob(job)
+	if err != nil {
+		return err
+	}
+	s.pollingCheckPublisher.PublishMessage(dto.UIPathCheckingJobInput{JobID: job.JobID})
 	return nil
 }

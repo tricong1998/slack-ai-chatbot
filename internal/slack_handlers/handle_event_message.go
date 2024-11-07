@@ -87,6 +87,12 @@ func (s *SlackHandler) handleMessageEvent(event *slackevents.MessageEvent) error
 		s.handleGreetingNewEmployeeEvent(
 			event.Channel,
 		)
+	case "create_buddy_form_file":
+		s.handleCreateBuddyFormEvent(event.Channel)
+	case "take_leave":
+		s.handleLeaveRequestEvent(event.Channel)
+	case "training_request":
+		s.handleIntegrateTrainingEvent(event.Channel)
 	}
 
 	return nil

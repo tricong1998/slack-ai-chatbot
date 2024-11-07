@@ -47,11 +47,14 @@ type GoogleConfig struct {
 }
 
 type UIPathConfig struct {
-	Host                          string `mapstructure:"UI_PATH_HOST"`
-	Tenant                        string `mapstructure:"UI_PATH_TENANT"`
-	TenantID                      string `mapstructure:"UI_PATH_TENANT_ID"`
-	ApiKey                        string `mapstructure:"UI_PATH_API_KEY"`
-	GreetingNewEmployeeProcessKey string `mapstructure:"UI_PATH_GREETING_NEW_EMPLOYEE_PROCESS_KEY"`
+	Host                              string `mapstructure:"UI_PATH_HOST"`
+	Tenant                            string `mapstructure:"UI_PATH_TENANT"`
+	TenantID                          string `mapstructure:"UI_PATH_TENANT_ID"`
+	ApiKey                            string `mapstructure:"UI_PATH_API_KEY"`
+	GreetingNewEmployeeProcessKey     string `mapstructure:"UI_PATH_GREETING_NEW_EMPLOYEE_PROCESS_KEY"`
+	FillBuddyProcessKey               string `mapstructure:"UI_PATH_FILL_BUDDY_PROCESS_KEY"`
+	CreateLeaveRequestProcessKey      string `mapstructure:"UI_PATH_CREATE_LEAVE_REQUEST_PROCESS_KEY"`
+	CreateIntegrateTrainingProcessKey string `mapstructure:"UI_PATH_CREATE_INTEGRATE_TRAINING_PROCESS_KEY"`
 }
 
 type RabbitMQConfig struct {

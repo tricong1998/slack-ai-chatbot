@@ -57,11 +57,11 @@ func main() {
 		log.Fatal().Err(err).Msg("Cannot connect rabbit")
 	}
 	dependencies := shared.InitDependencies(db, rabbitConn, &cfg)
-	welcomeNewEmployeeDependencies := rabbit_handler.WelcomeNewEmployeeDependencies{
+	checkUIPathJobDependencies := rabbit_handler.PollingCheckUIPathJobDependencies{
 		UIPathJobService: dependencies.UIPathJobService,
 		Logger:           dependencies.Logger,
 	}
-	greetingConsumer := rabbitmq.NewConsumer[*rabbit_handler.WelcomeNewEmployeeDependencies](
+	greetingConsumer := rabbitmq.NewConsumer[*rabbit_handler.PollingCheckUIPathJobDependencies](
 		context.Background(),
 		&rabbitConfig,
 		rabbitConn,
@@ -72,8 +72,59 @@ func main() {
 		rabbitmq.WELCOME_NEW_EMPLOYEE_QUEUE,
 		rabbitmq.WELCOME_NEW_EMPLOYEE_QUEUE,
 	)
+	fillBuddyConsumer := rabbitmq.NewConsumer[*rabbit_handler.PollingCheckUIPathJobDependencies](
+		context.Background(),
+		&rabbitConfig,
+		rabbitConn,
+		*dependencies.Logger,
+		rabbit_handler.HandlePollingCheckUIPathJob,
+		rabbitmq.HYPER_AUTOMATE_CHATBOT,
+		"direct",
+		rabbitmq.FILL_BUDDY_FORM_QUEUE,
+		rabbitmq.FILL_BUDDY_FORM_QUEUE,
+	)
+	leaveRequestConsumer := rabbitmq.NewConsumer[*rabbit_handler.PollingCheckUIPathJobDependencies](
+		context.Background(),
+		&rabbitConfig,
+		rabbitConn,
+		*dependencies.Logger,
+		rabbit_handler.HandlePollingCheckUIPathJob,
+		rabbitmq.HYPER_AUTOMATE_CHATBOT,
+		"direct",
+		rabbitmq.CREATE_LEAVE_REQUEST_QUEUE,
+		rabbitmq.CREATE_LEAVE_REQUEST_QUEUE,
+	)
+	integrateTrainingConsumer := rabbitmq.NewConsumer[*rabbit_handler.PollingCheckUIPathJobDependencies](
+		context.Background(),
+		&rabbitConfig,
+		rabbitConn,
+		*dependencies.Logger,
+		rabbit_handler.HandlePollingCheckUIPathJob,
+		rabbitmq.HYPER_AUTOMATE_CHATBOT,
+		"direct",
+		rabbitmq.CREATE_INTEGRATE_TRAINING_REQUEST_QUEUE,
+		rabbitmq.CREATE_INTEGRATE_TRAINING_REQUEST_QUEUE,
+	)
 	go func() {
-		err := greetingConsumer.ConsumeMessage(dto.CreateUserPoint{}, &welcomeNewEmployeeDependencies)
+		err := greetingConsumer.ConsumeMessage(dto.UIPathGreetingNewEmployee{}, &checkUIPathJobDependencies)
+		if err != nil {
+			log.Error().Err(err).Msg("Consume message error")
+		}
+	}()
+	go func() {
+		err := fillBuddyConsumer.ConsumeMessage(dto.UIPathFillBuddyInput{}, &checkUIPathJobDependencies)
+		if err != nil {
+			log.Error().Err(err).Msg("Consume message error")
+		}
+	}()
+	go func() {
+		err := integrateTrainingConsumer.ConsumeMessage(dto.UIPathCreateIntegrateTrainingInput{}, &checkUIPathJobDependencies)
+		if err != nil {
+			log.Error().Err(err).Msg("Consume message error")
+		}
+	}()
+	go func() {
+		err := leaveRequestConsumer.ConsumeMessage(dto.UIPathCreateLeaveRequestInput{}, &checkUIPathJobDependencies)
 		if err != nil {
 			log.Error().Err(err).Msg("Consume message error")
 		}
@@ -83,7 +134,6 @@ func main() {
 		context.Background(),
 		&dependencies,
 	)
-	// dependencies.UIPathJobService.PollingCheck(418824812)
 	runGinServer(&dependencies)
 }
 

@@ -8,6 +8,6 @@ func IsValidEmail(email string) bool {
 }
 
 func IsValidGoogleSheetLink(link string) bool {
-	linkRegex := regexp.MustCompile(`^https://docs\.google\.com/spreadsheets/d/[^\s]+/edit\?gid=[^\s]+$`)
+	linkRegex := regexp.MustCompile(`^https://docs\.google\.com/spreadsheets/(?:u/\d+/)?d/[a-zA-Z0-9_-]+/edit.*$`)
 	return linkRegex.MatchString(link)
 }
