@@ -2,7 +2,6 @@ package slack_handlers
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/slack-go/slack"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/dto"
@@ -10,7 +9,6 @@ import (
 )
 
 func (s *SlackHandler) handleCreateBuddyFormFileEvent(payload slack.InteractionCallback) error {
-	fmt.Println("handleCreateBuddyFormFileEvent----")
 	submittedTransformationInputFile := payload.BlockActionState.Values["transformation_input_file"]["transformation_input_file_input"].Value
 	submittedTransformationOutputFile := payload.BlockActionState.Values["transformation_output_file"]["transformation_output_file_input"].Value
 	if !util.IsValidGoogleSheetLink(submittedTransformationInputFile) {

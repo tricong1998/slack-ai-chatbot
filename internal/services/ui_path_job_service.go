@@ -93,14 +93,11 @@ func (s *UIPathJobService) HandleCheckGreetingJobPolling(job *models.UIPathJob) 
 	if status == JobStatusCompleted {
 		uiPathGreetingOutput := dto.UIPathGreetingOutput{}
 		err := json.Unmarshal([]byte(output), &uiPathGreetingOutput)
-		fmt.Println("err----", err)
 		if err != nil {
 			str := "Sorry, something went wrong. Please try again later."
 			s.SlackService.SendMessage(context.Background(), &job.SlackChannel, str)
 			return true, err
 		}
-		fmt.Println("uiPathGreetingOutput.Greeting----", uiPathGreetingOutput.Greeting)
-		fmt.Println("job.SlackChannel----", job.SlackChannel)
 		s.SlackService.SendMessage(context.Background(), &job.SlackChannel, uiPathGreetingOutput.Greeting)
 		return true, nil
 	} else if status == JobStatusFailed {
@@ -121,14 +118,11 @@ func (s *UIPathJobService) HandleCheckFillBuddyFormJobPolling(job *models.UIPath
 	if status == JobStatusCompleted {
 		uiPathFillBuddyOutput := dto.UIPathFillBuddyOutput{}
 		err := json.Unmarshal([]byte(output), &uiPathFillBuddyOutput)
-		fmt.Println("err----", err)
 		if err != nil {
 			str := "Sorry, something went wrong. Please try again later."
 			s.SlackService.SendMessage(context.Background(), &job.SlackChannel, str)
 			return true, err
 		}
-		fmt.Println("uiPathFillBuddyOutput.BuddyFormName----", uiPathFillBuddyOutput.BuddyFormName)
-		fmt.Println("job.SlackChannel----", job.SlackChannel)
 		response := fmt.Sprintf("Buddy form created successfully. Please check file %s", uiPathFillBuddyOutput.BuddyFormName)
 		s.SlackService.SendMessage(context.Background(), &job.SlackChannel, response)
 		return true, nil
@@ -207,17 +201,11 @@ func (s *UIPathJobService) HandleCheckCreateIntegrateTrainingJobPolling(job *mod
 }
 
 func (s *UIPathJobService) CheckAndUpdateJobStatus(jobID int) (string, string, error) {
-	fmt.Println("CheckAndUpdateJobStatus----", jobID)
 	job, err := s.GetJob(jobID)
-	fmt.Println("job----", job)
-	fmt.Println("err----", err)
 	if err != nil {
 		return "", "", err
 	}
 	jobDetails, err := s.UIPathService.GetJobDetails(job.JobID)
-	fmt.Println("jobDetails----", jobDetails)
-	fmt.Println("jobDetailsState----", jobDetails.State)
-	fmt.Println("err----", err)
 	if err != nil {
 		job.State = JobStatusFailed
 		job.Error = err.Error()
@@ -265,9 +253,6 @@ func (s *UIPathJobService) CreateGreetingJob(input dto.UIPathGreetingNewEmployee
 
 func (s *UIPathJobService) CreateFillBuddyJob(input dto.UIPathFillBuddyInput, slackChannel string) error {
 	uiJob, err := s.UIPathService.FillBuddyForm(input)
-	fmt.Println("CreateFillBuddyJob")
-	fmt.Println("uiJob", uiJob)
-	fmt.Println("err", err)
 	if err != nil {
 		return err
 	}
@@ -289,7 +274,6 @@ func (s *UIPathJobService) CreateIntegrateTrainingJob(input dto.UIPathCreateInte
 	if err != nil {
 		return err
 	}
-	fmt.Println("uiJob, err", uiJob, err)
 	job := &models.UIPathJob{
 		JobID:        uiJob.ID,
 		JobType:      models.JobTypeIntegrateTrainingForm,

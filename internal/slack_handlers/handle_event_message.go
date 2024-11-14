@@ -79,7 +79,6 @@ func (s *SlackHandler) handleMessageEvent(event *slackevents.MessageEvent) error
 	if err != nil {
 		return err
 	}
-	fmt.Println("action", action)
 	switch action {
 	case "onboard_nhan_vien":
 		s.handleCandidateSheetEvent(event.Channel)

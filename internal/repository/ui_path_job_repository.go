@@ -1,8 +1,6 @@
 package repository
 
 import (
-	"fmt"
-
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/models"
 	"gorm.io/gorm"
 )
@@ -28,6 +26,5 @@ func (r *UIPathJobRepository) GetJob(jobID int) (*models.UIPathJob, error) {
 }
 
 func (r *UIPathJobRepository) UpdateJob(job *models.UIPathJob) error {
-	fmt.Println("job----", job)
 	return r.db.Save(job).Error
 }

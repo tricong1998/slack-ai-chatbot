@@ -91,7 +91,7 @@ type UIPathCreateLeaveRequestInput struct {
 	HolidayStatusId int    `json:"holiday_status_id"`
 	HourFrom        int    `json:"hour_from"`
 	HourTo          int    `json:"hour_to"`
-	WorkerEmail     string `json:"worker_email"`
+	WorkEmail       string `json:"work_email"`
 }
 
 type UIPathCreateIntegrateTrainingInput struct {

@@ -2,7 +2,6 @@ package slack_handlers
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/slack-go/slack"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/dto"
@@ -10,7 +9,6 @@ import (
 )
 
 func (s *SlackHandler) handleCreateIntegrateTrainingSubmission(payload slack.InteractionCallback) error {
-	fmt.Println("handleCreateIntegrateTrainingSubmission----")
 	submittedSheetURL := payload.BlockActionState.Values["sheet_url"]["sheet_url_input"].Value
 	submittedSheetName := payload.BlockActionState.Values["sheet_name"]["sheet_name_input"].Value
 	if !util.IsValidGoogleSheetLink(submittedSheetURL) {
@@ -25,7 +23,6 @@ func (s *SlackHandler) handleCreateIntegrateTrainingSubmission(payload slack.Int
 		SheetURL:  submittedSheetURL,
 		SheetName: submittedSheetName,
 	}, payload.Channel.ID)
-	fmt.Println("err-=-=-=-=-=-=", err)
 	return err
 }
 

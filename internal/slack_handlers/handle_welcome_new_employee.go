@@ -2,7 +2,6 @@ package slack_handlers
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/slack-go/slack"
 	"github.com/sotatek-dev/hyper-automation-chatbot/internal/dto"
@@ -10,7 +9,6 @@ import (
 )
 
 func (s *SlackHandler) handleGreetingNewEmployeeSubmission(payload slack.InteractionCallback) error {
-	fmt.Println("handleGreetingNewEmployeeSubmission----")
 	submittedSkillFile := payload.BlockActionState.Values["skill_file"]["skill_file_input"].Value
 	submittedPersonalEmail := payload.BlockActionState.Values["personal_email"]["personal_email_input"].Value
 	if !util.IsValidGoogleSheetLink(submittedSkillFile) {

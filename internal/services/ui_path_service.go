@@ -96,7 +96,6 @@ func (s *UIPathService) CreateIntegrateTraining(body dto.UIPathCreateIntegrateTr
 
 func (s *UIPathService) CallPostTriggerJob(body interface{}, key string) (*dto.UIPathTriggerResponse, error) {
 	url := s.GetUrlTrigger(key)
-	fmt.Println("url-=-=-=-", url, body)
 	resp, err := s.Call("POST", url, body)
 	if err != nil {
 		return nil, err
@@ -111,8 +110,6 @@ func (s *UIPathService) CallPostTriggerJob(body interface{}, key string) (*dto.U
 		return nil, errors.New(error.Message)
 	}
 	var data dto.UIPathTriggerResponse
-	fmt.Println(resp)
-	fmt.Println(url)
 	err = json.NewDecoder(resp.Body).Decode(&data)
 	if err != nil {
 		return nil, err

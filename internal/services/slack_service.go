@@ -347,8 +347,6 @@ func (s *SlackService) SendIntegrateTrainingForm(ctx context.Context, channelID 
 }
 
 func (s *SlackService) SendCreateLeaveRequestForm(ctx context.Context, channelID string) error {
-	fmt.Println("send create leave request form")
-	fmt.Println(channelID)
 	leaveOptions := make([]*slack.OptionBlockObject, 0)
 	for _, leave := range dto.AppMappingCodeLeave {
 		leaveOptions = append(leaveOptions, &slack.OptionBlockObject{
@@ -454,26 +452,6 @@ func (s *SlackService) SendCreateLeaveRequestForm(ctx context.Context, channelID
 				},
 			},
 		),
-		slack.NewInputBlock(
-			"worker_email",
-			&slack.TextBlockObject{
-				Type:     slack.PlainTextType,
-				Text:     "Worker Email",
-				Emoji:    false,
-				Verbatim: false,
-			},
-			nil,
-			&slack.PlainTextInputBlockElement{
-				Type:        slack.METPlainTextInput,
-				ActionID:    "email_input",
-				Placeholder: &slack.TextBlockObject{Type: slack.PlainTextType, Text: "Enter the worker email"},
-				MinLength:   0,
-				MaxLength:   254,
-				DispatchActionConfig: &slack.DispatchActionConfig{
-					TriggerActionsOn: []string{"on_enter_pressed"},
-				},
-			},
-		),
 		slack.NewActionBlock(
 			"submit_create_leave_request",
 			slack.NewButtonBlockElement(
@@ -486,7 +464,6 @@ func (s *SlackService) SendCreateLeaveRequestForm(ctx context.Context, channelID
 
 	_, _, err := s.slackClient.PostMessage(channelID, slack.MsgOptionBlocks(blocks...))
 	if err != nil {
-		fmt.Println("Failed to send create leave request form: ", err)
 		s.slackClient.PostMessage(channelID, slack.MsgOptionText("Failed to send create leave request form: "+err.Error(), false))
 		return fmt.Errorf("failed to post message: %w", err)
 	}

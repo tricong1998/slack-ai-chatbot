@@ -2,7 +2,6 @@ package rabbitmq
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"time"
 
@@ -102,16 +101,13 @@ func (c Consumer[T]) ConsumeMessage(msg interface{}, dependencies T) error {
 				c.log.Error().Err(err).Msg(err.Error())
 			}
 
-			fmt.Println("delivery", delivery)
 			err = delivery.Ack(false)
 			if err != nil {
 				c.log.Fatal().Err(err).Msgf("We didn't get a ack for delivery: %v", string(delivery.Body))
 			}
-			fmt.Println("done")
 		}
 	}()
 
-	fmt.Println("Waiting for messages...")
 	<-forever
 	c.log.Info().Msgf("Waiting for messages in queue :%s. To exit press CTRL+C", q.Name)
 
@@ -139,7 +135,7 @@ func (c Consumer[T]) IsConsumed(msg interface{}) bool {
 
 		isConsumed = linq.From(consumedMessages).Contains(snakeTypeName)
 
-		timeOutExpired = time.Now().Sub(startTime) > timeOutTime
+		timeOutExpired = time.Since(startTime) > timeOutTime
 	}
 }
 
