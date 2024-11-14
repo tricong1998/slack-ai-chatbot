@@ -94,6 +94,10 @@ func (s *UIPathService) CreateIntegrateTraining(body dto.UIPathCreateIntegrateTr
 	return s.CallPostTriggerJob(body, s.config.CreateIntegrateTrainingProcessKey)
 }
 
+func (s *UIPathService) PreOnboardEmail(body dto.UIPathPreOnboardEmailInput) (*dto.UIPathTriggerResponse, error) {
+	return s.CallPostTriggerJob(body, s.config.PreOnboardEmailProcessKey)
+}
+
 func (s *UIPathService) CallPostTriggerJob(body interface{}, key string) (*dto.UIPathTriggerResponse, error) {
 	url := s.GetUrlTrigger(key)
 	resp, err := s.Call("POST", url, body)

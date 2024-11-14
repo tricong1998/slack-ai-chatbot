@@ -469,3 +469,77 @@ func (s *SlackService) SendCreateLeaveRequestForm(ctx context.Context, channelID
 	}
 	return nil
 }
+
+func (s *SlackService) SendPreOnboardEmailForm(ctx context.Context, channelID string) error {
+	blocks := []slack.Block{
+		slack.NewSectionBlock(
+			slack.NewTextBlockObject("mrkdwn", "Please enter the sheet url and sheet name", false, false),
+			nil,
+			nil,
+		),
+		slack.NewInputBlock(
+			"sheet_url",
+			&slack.TextBlockObject{
+				Type:     slack.PlainTextType,
+				Text:     "Sheet URL",
+				Emoji:    false,
+				Verbatim: false,
+			},
+			&slack.TextBlockObject{
+				Type:     slack.PlainTextType,
+				Text:     "Enter the sheet url",
+				Emoji:    false,
+				Verbatim: false,
+			},
+			&slack.PlainTextInputBlockElement{
+				Type:        slack.METPlainTextInput,
+				ActionID:    "sheet_url_input",
+				Placeholder: &slack.TextBlockObject{Type: slack.PlainTextType, Text: "Enter the sheet url"},
+				MinLength:   1,   // Minimum length for a valid email
+				MaxLength:   254, // Maximum length per RFC 5321
+				DispatchActionConfig: &slack.DispatchActionConfig{
+					TriggerActionsOn: []string{"on_enter_pressed"},
+				},
+			},
+		),
+		slack.NewInputBlock(
+			"sheet_name",
+			&slack.TextBlockObject{
+				Type:     slack.PlainTextType,
+				Text:     "Sheet Name",
+				Emoji:    false,
+				Verbatim: false,
+			},
+			&slack.TextBlockObject{
+				Type:     slack.PlainTextType,
+				Text:     "Enter the sheet name",
+				Emoji:    false,
+				Verbatim: false,
+			},
+			&slack.PlainTextInputBlockElement{
+				Type:        slack.METPlainTextInput,
+				ActionID:    "sheet_name_input",
+				Placeholder: &slack.TextBlockObject{Type: slack.PlainTextType, Text: "Enter the sheet name"},
+				MinLength:   1,   // Minimum length for a valid email
+				MaxLength:   254, // Maximum length per RFC 5321
+				DispatchActionConfig: &slack.DispatchActionConfig{
+					TriggerActionsOn: []string{"on_enter_pressed"},
+				},
+			},
+		),
+		slack.NewActionBlock(
+			"submit_pre_onboard_email",
+			slack.NewButtonBlockElement(
+				"submit_pre_onboard_email",
+				"submit_pre_onboard_email",
+				slack.NewTextBlockObject("plain_text", "Submit", false, false),
+			),
+		),
+	}
+
+	_, _, err := s.slackClient.PostMessage(channelID, slack.MsgOptionBlocks(blocks...))
+	if err != nil {
+		return fmt.Errorf("failed to post message: %w", err)
+	}
+	return nil
+}

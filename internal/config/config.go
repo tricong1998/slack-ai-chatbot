@@ -55,6 +55,7 @@ type UIPathConfig struct {
 	FillBuddyProcessKey               string `mapstructure:"UI_PATH_FILL_BUDDY_PROCESS_KEY"`
 	CreateLeaveRequestProcessKey      string `mapstructure:"UI_PATH_CREATE_LEAVE_REQUEST_PROCESS_KEY"`
 	CreateIntegrateTrainingProcessKey string `mapstructure:"UI_PATH_CREATE_INTEGRATE_TRAINING_PROCESS_KEY"`
+	PreOnboardEmailProcessKey         string `mapstructure:"UI_PATH_PRE_ONBOARD_EMAIL_PROCESS_KEY"`
 }
 
 type RabbitMQConfig struct {

@@ -184,3 +184,13 @@ type UIPathLeaveOutputErrorData struct {
 	Arguments     []string `json:"arguments"`
 	ExceptionType string   `json:"exception_type"`
 }
+
+type UIPathPreOnboardEmailInput struct {
+	SheetURL  string `json:"sheetURL"`
+	SheetName string `json:"sheetName"`
+}
+
+type UIPathPreOnboardEmailOutput struct {
+	ErrMessage     []string `json:"errMessage"`
+	JobInfoMessage string   `json:"jobInfoMessage"`
+}

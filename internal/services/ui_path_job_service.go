@@ -78,6 +78,15 @@ func (s *UIPathJobService) PollingCheck(jobID int) (bool, error) {
 			if completed {
 				return true, nil
 			}
+		case models.JobTypePreOnboardEmail:
+			completed, err := s.HandleCheckCreatePreOnboardEmailJobPolling(job)
+			if err != nil {
+				s.SlackService.SendMessage(context.Background(), &job.SlackChannel, err.Error())
+				return false, err
+			}
+			if completed {
+				return true, nil
+			}
 		}
 	}
 	return false, nil
@@ -199,6 +208,34 @@ func (s *UIPathJobService) HandleCheckCreateIntegrateTrainingJobPolling(job *mod
 	}
 	return false, nil
 }
+func (s *UIPathJobService) HandleCheckCreatePreOnboardEmailJobPolling(job *models.UIPathJob) (bool, error) {
+	status, output, err := s.CheckAndUpdateJobStatus(job.JobID)
+	if err != nil {
+		str := "Sorry, something went wrong. Please try again later."
+		s.SlackService.SendMessage(context.Background(), &job.SlackChannel, str)
+		return true, err
+	}
+	if status == JobStatusCompleted {
+		uiPathCreatePreOnboardEmailOutput := dto.UIPathPreOnboardEmailOutput{}
+		err := json.Unmarshal([]byte(output), &uiPathCreatePreOnboardEmailOutput)
+		if err != nil {
+			return true, err
+		}
+		if uiPathCreatePreOnboardEmailOutput.JobInfoMessage != "" {
+			s.SlackService.SendMessage(context.Background(), &job.SlackChannel, uiPathCreatePreOnboardEmailOutput.JobInfoMessage)
+			for _, message := range uiPathCreatePreOnboardEmailOutput.ErrMessage {
+				s.SlackService.SendMessage(context.Background(), &job.SlackChannel, message)
+			}
+			return true, nil
+		}
+		return true, err
+	} else if status == JobStatusFailed {
+		str := "Sorry, something went wrong. Please try again later."
+		s.SlackService.SendMessage(context.Background(), &job.SlackChannel, str)
+		return true, nil
+	}
+	return false, nil
+}
 
 func (s *UIPathJobService) CheckAndUpdateJobStatus(jobID int) (string, string, error) {
 	job, err := s.GetJob(jobID)
@@ -295,6 +332,24 @@ func (s *UIPathJobService) CreateLeaveRequestJob(input dto.UIPathCreateLeaveRequ
 	job := &models.UIPathJob{
 		JobID:        uiJob.ID,
 		JobType:      models.JobTypeCreateLeaveRequest,
+		SlackChannel: slackChannel,
+	}
+	err = s.uiPathJobRepository.CreateJob(job)
+	if err != nil {
+		return err
+	}
+	s.pollingCheckPublisher.PublishMessage(dto.UIPathCheckingJobInput{JobID: job.JobID})
+	return nil
+}
+
+func (s *UIPathJobService) CreatePreOnboardEmailJob(input dto.UIPathPreOnboardEmailInput, slackChannel string) error {
+	uiJob, err := s.UIPathService.PreOnboardEmail(input)
+	if err != nil {
+		return err
+	}
+	job := &models.UIPathJob{
+		JobID:        uiJob.ID,
+		JobType:      models.JobTypePreOnboardEmail,
 		SlackChannel: slackChannel,
 	}
 	err = s.uiPathJobRepository.CreateJob(job)
